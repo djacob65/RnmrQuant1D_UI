@@ -1,0 +1,200 @@
+:root { --heightPanel : 760px; --heightTabs : 720px; }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px;}
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px;}
+::-webkit-scrollbar-thumb:hover {background: #999; border-radius: 10px;}
+
+body::-webkit-scrollbar { display: none; }
+
+.glob {
+	font-size: 1em;
+	font-family:'Verdana, sans-serif';
+	text-decoration:none;
+	font-weight:normal;
+}
+
+.shiny-output-error {
+  visibility: hidden;
+}
+
+.cprght {
+  font-size:8pt;font-style:italic;font-family:'Arial';text-decoration:none;font-weight:normal;
+}
+
+.btn-default {
+  color: #fff; background-color: #337ab7; border-color: #2e6da4;
+}
+
+.expbtn {
+  color: #fff; background-color: #337ab7; border-color: #2e6da4;
+}
+
+.textlabs {
+  font-size:10pt;font-family:'Arial';text-decoration:none;font-weight:bold;
+}
+
+.textblock {
+  font-size:10pt;font-family:'Arial';text-decoration:none;font-weight:none;
+}
+
+.passerr {
+  color: red;
+}
+
+#table tr:hover {
+  background-color: rgba(240, 136, 33, 0.4) !important;
+}
+
+.waitbox, #loadmessage, #uploadmsg, #Exportmsg { 
+  width:400px;height:50px;line-height:50px;padding:5px 0px 5px 0px;z-index: 105; background-image:url(images/throbber.gif); background-repeat:no-repeat;background-size: 120px 20px;
+}
+
+#outZones1 {
+  background-color: rgba(204,229,255,0.20);
+}
+#outZones2 {
+  background-color: rgba(255,204,255,0.20);
+}
+
+#fileinfo {
+  font-size: 16px; color: blue; border: 1px solid #ddd; padding: 5px; border-radius: 5px;
+}
+
+.inputtextarea {
+    border-color: #A933B7;
+    line-height: 1.5;
+}
+
+.input-group .form-control, .input-group-addon, .input-group-btn {
+    height: 26px;
+}
+
+.btn {
+    line-height: 1;
+    font-size: 14px;
+    padding: 4px 8px;
+}
+
+.col-sm-1, .col-sm-10, .col-sm-11, .col-sm-12, .col-sm-2, .col-sm-3, .col-sm-4, .col-sm-5, .col-sm-6, .col-sm-7, .col-sm-8, .col-sm-9 {
+    padding-right: 10px;
+    padding-left: 10px;
+}
+
+.textsimple {
+    border-color: #CCC;
+    min-height: 20px;
+    min-width: 150px;
+}
+
+.single {
+    min-height: 20px;
+    min-width: 150px;
+}
+
+/* scrollbar */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+::-webkit-scrollbar-thumb {
+-webkit-border-radius: 0px;
+border-radius: 0px;
+background: rgba(198, 201, 214, 0.8);
+}
+::-webkit-scrollbar-track {
+-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+border-radius: 0px;
+}
+
+.checkbox, .radio {
+  position: relative;
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 1.42857143;
+  color: #555;
+}
+
+.selectize-control {
+  position: relative;
+  padding: 0;
+  height: auto;
+  border: none;
+  background: none;
+  -webkit-box-shadow: none;
+  box-shadow: none;
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+  border-radius: 0;
+  font-size: 14px;
+  line-height: 1.42857143;
+  color: #555;
+}
+
+.tabbable {
+  font-size: 14px;
+  color: #555;
+}
+
+.modal-footer {
+	border-top: 0px;
+}
+
+.glob {
+  font-size: 1em; font-family:'Verdana, sans-serif';text-decoration:none;font-weight:normal;
+}
+
+.tabs {
+  height : var(--heightTabs); overflow-x:auto; overflow-y:scroll;
+}
+
+.myPanel {
+  height : var(--heightPanel);
+}
+
+.help-block {
+  font-size: 12px; color: #181f7b;
+}
+
+.shiny-output-error-validation {
+  color: red;
+}
+
+.shiny-text-output {
+  background-color: white !important; border: 0px solid #ddd; padding: 10px; border-radius: 5px;
+}
+
+.markdown-body { 
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 1000px;
+  padding: 20px;
+}
+
+.markdown-body table thead { background-color: lightgrey; }
+.markdown-body table thead tr th, .markdown-body table tr td { padding: 10px 10px 10px 10px;}
+.markdown-body table tr { border-bottom:1pt solid #ccc; }
+
+.footer {
+  text-align:center;
+  margin-left:auto;
+  margin-right:auto;
+  position:absolute;
+  bottom:0;
+}
+
+.nav-pills .nav-link {
+  border-radius: 0;
+  border: none;
+  background-color: #b8ceec;
+  color: #1a2744;
+  font-weight: 400;
+}
+
+.nav-pills .nav-link.active {
+  background-color: #1a4b8c;
+  color: #ffffff;
+  font-weight: 500;
+}
