@@ -8,7 +8,7 @@
 
 This application was initially developed as part of a project on wine authenticity. However, it is generic enough to be used on other biological and/or food matrices. This involves the implementation of an analytical protocol allowing quantification from an external standard (see references).
 
-This application is designed around the <a href="https://github.com/djacob65/RnmrQuant1D" target="_blank">RnmrQuant1D</a> package, which forms its core. However, it is primarily designed for processing small batches of spectra (<100) more easily than in script mode. For larger batches, it is strongly recommended to switch to script mode (<a href="https://docs.posit.co/ide/user/" target="_blank">Rstudio</a> or <a href="https://jupyter.org/" target="_blank">JupyterLab</a>)
+This <a href="https://shiny.posit.co/r/getstarted/" target="_blank">R Shiny</a> application is designed around the <a href="https://github.com/djacob65/RnmrQuant1D" target="_blank">RnmrQuant1D</a> package, which forms its core. However, it is primarily designed for processing small batches of spectra (<100) more easily than in script mode. For larger batches, it is strongly recommended to switch to script mode using <a href="https://docs.posit.co/ide/user/" target="_blank">Rstudio</a> or <a href="https://jupyter.org/" target="_blank">JupyterLab</a>.
 
 </div>
 
@@ -19,7 +19,8 @@ This application is designed around the <a href="https://github.com/djacob65/Rnm
 
 	* R version >= 4.3
 	* RnmrQuant1D >= 1.2.6 (see https://github.com/djacob65/RnmrQuant1D)
-	
+	* Other R packages : shiny, shinyjs, shinyBS, shinyWidgets, shinycssloaders, markdown
+
 
 * Clone this repository, then `cd` to your clone path.
 
@@ -32,13 +33,15 @@ This application is designed around the <a href="https://github.com/djacob65/Rnm
 
 Either you open a R terminal, then you enter the following command:
 
+           setwd('/path_to_the_RnmrQuant1D_UI_directory')
            shiny::runApp(launch.browser=TRUE)
 
 or from a shell/batch console (cmd or bash), enter the following command:
 
+           cd /path_to_the_RnmrQuant1D_UI_directory
            Rscript -e 'shiny::runApp(launch.browser=TRUE)'
 
-or for Windows users, click on the 'runApp.bat' file into the explorer
+or for _Windows_ users, click on the _runApp.bat_ file into the explorer
 
 <br>
 

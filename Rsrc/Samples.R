@@ -89,7 +89,7 @@ sampleTable <- reactive({
 	updateSelectInput(session, inputId='sequence', label = 'Sequence (PULSE)', choices = optionPulse)
 	updateSelectInput(session, inputId='sequence2', label = 'Sequence (PULSE)', choices = optionPulse)
 
-	# Update Quantification profile
+	# Update Quantification profile for Integration / Quantification
 	lstfiles <- list.files( path = file.path(gv$outDir, 'profiles'), pattern = "^profile-", full.names = FALSE)
 	lstfiles <- lstfiles[grep(paste0('(',paste(optionPulse, collapse="|"),')'), lstfiles)]
 	lstfiles <- lstfiles[grep(rq1d$FIELD, lstfiles)]

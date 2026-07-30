@@ -8,8 +8,10 @@
 options(show.error.locations = TRUE)
 
 
-### Parse the section 'section' within the 'INI.file' file
-#   Get the INI.list as an initial list to add or replace the couple of values (key=value)
+#----
+# Parse the section 'section' within the 'INI.file' file
+# Get the INI.list as an initial list to add or replace the couple of values (key=value)
+#----
 Parse.INI <- function(INI.file, INI.list=list(), section="GLOBAL")
 {
 	connection <- file(INI.file)
@@ -328,6 +330,9 @@ submit_rq1d_proc <- function(rq1d, gv, proc='intg', reset=TRUE)
 }
 
 
+#----
+# Compute the response factor for the 'QStype' type based on the 'QSlist' spectra
+#----
 get_response_factors <- function(rq1d, QStype, QSlist, thresfP, deconv, qbl, append=FALSE, verbose)
 {
 	js <- paste0("document.getElementById('calibmsg').textContent = 'Waiting - Response factor for ",QStype," : ")

@@ -183,6 +183,9 @@ outputOptions(output, 'endQuant', suspendWhenHidden=FALSE)
 outputOptions(output, 'endQuant', priority=20)
 
 
+##---------------
+## Show / update the progress bar
+##---------------
 quant_pb <- function(msg, p1p){
 	p1px <- 7*p1p; p2px <- 700 - p1px;
 	shinyjs::runjs( paste0("
@@ -193,8 +196,9 @@ quant_pb <- function(msg, p1p){
 	"))
 }
 
+
 ##---------------
-# Executes an expr, intercepting —where applicable— the message and interruption
+# Execute an expr, intercepting —where applicable— the message and interruption
 ##---------------
 quant.exe.catch  <- function(expr) {
 	out <- exe.catch({ expr })

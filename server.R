@@ -65,7 +65,7 @@ server <- function(input, output, session)
 
 
 	# --------------------------
-	# Handle application reload/stop events
+	# Handle application reload events
 	# --------------------------
 
 	observeEvent(input$resetBtn1, {
@@ -77,11 +77,8 @@ server <- function(input, output, session)
 	})
 
 	session$onSessionEnded(function() {
-		if (!isolate(rv$reset)) {
-			stopApp()
-		} else {
+		if (isolate(rv$reset))
 			empty_directory(gv$outDir)
-		}
 	})
 
 

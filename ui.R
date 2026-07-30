@@ -141,7 +141,8 @@ ui <- fluidPage(
 						conditionalPanel(condition = "input.externalIntg",
 							fluidRow(
 								column(9,
-									fileInput(inputId = "externIntgFile", label = "Quantification profile", placeholder = "No selected profile", width = "100%", accept = c( '.tsv', '.txt', '.xlsx' ))
+									fileInput(inputId = "externIntgFile", label = "Quantification profile", placeholder = "No selected profile", 
+										width = "100%", accept = c( '.tsv', '.txt', '.xlsx' ))
 								),
 								column(3, style = "margin-top: 28px;",
 									bsButton("viewIntgBtn", label = "View", style="info", disabled = FALSE)
@@ -228,7 +229,8 @@ ui <- fluidPage(
 							conditionalPanel(condition = "input.externalCalib",
 								fluidRow(
 									column(9,
-										fileInput(inputId = "externCalibFile", label = "Calibration profile", placeholder = "No selected profile", width = "100%", accept = c( '.tsv', '.txt', '.xlsx' ))
+										fileInput(inputId = "externCalibFile", label = "Calibration profile", placeholder = "No selected profile", 
+											width = "100%", accept = c( '.tsv', '.txt', '.xlsx' ))
 									),
 									column(3, style = "margin-top: 28px;",
 										bsButton("viewCalibBtn", label = "View", style="info", disabled = FALSE)
@@ -279,7 +281,8 @@ ui <- fluidPage(
 						conditionalPanel(condition = "input.externalQuant",
 							fluidRow(
 								column(9,
-									fileInput(inputId = "externQuantFile", label = "Quantification profile", placeholder = "No selected profile", width = "100%", accept = c( '.tsv', '.txt', '.xlsx' ))
+									fileInput(inputId = "externQuantFile", label = "Quantification profile", placeholder = "No selected profile", 
+										width = "100%", accept = c( '.tsv', '.txt', '.xlsx' ))
 								),
 								column(3, style = "margin-top: 28px;",
 									bsButton("viewQuantBtn", label = "View", style="info", disabled = FALSE)
