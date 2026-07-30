@@ -26,7 +26,6 @@ Parse.INI <- function(INI.file, INI.list=list(), section="GLOBAL")
 	d <- subset(transform(d, V3 = V2[which(L)[cumsum(L)]])[1:3], V1 != "")
 	d <- d[d$V3 == section,]
 	
-	#INI.list <- list()
 	for( i in 1:dim(d)[1] ) {
 		if (! is.na(suppressWarnings(as.numeric(d$V2[i])))) {
 			eval(parse(text=paste0('INI.list$',d$V1[i], '<-', as.numeric(d$V2[i]))))
@@ -268,7 +267,7 @@ submit_rq1d_proc <- function(rq1d, gv, proc='intg', reset=TRUE)
 {
 	unlink(file.path(rq1d$TMPDIR,"log-*.txt"))
 	unlink(file.path(rq1d$TMPDIR,"output_*.txt"))
-	unlink(file.path(rq1d$TMPDIR,"ended.out"))
+	unlink(file.path(rq1d$TMPDIR,ENDFILE))
 	unlink(file.path(rq1d$TMPDIR,rq1d$cluster_status_file))
 	saveRDS(rq1d, file=file.path(gv$outDir,'rq1d.rds'))
 
@@ -285,38 +284,81 @@ submit_rq1d_proc <- function(rq1d, gv, proc='intg', reset=TRUE)
 	Rcmd <- paste0("# Compounds: ",cmpds,"
 		setwd(\"",gsub("\\\\", "/", gv$outDir),"\")
 		rq1d <- readRDS('rq1d.rds')
-		sink('rq1d.out')
+		sink('",OUTLOG,"')
+		out <- \"\\nSUCCESS!\"
 		t <- system.time({
 			tryCatch({
-				",rq1d_cmd,"
+				withCallingHandlers({
+					",rq1d_cmd,"
+				}, message = function(m) { # intercept the message
+					out <<- conditionMessage(m)
+					invokeRestart(\"muffleMessage\")  # prevents the message from appearing in the R console
+				})
+			}, interrupt = function(cnd) { # intercept the interrupt
+				NULL
 			}, error=function(e) {
-				cat('ERROR: proc_",proc_label," failed :', \"\\n\", paste(e, collapse=\"\\n\"), \"\\n\")
+				out <<- paste('ERROR: proc_",proc_label," failed :', \"\\n\", paste(e, collapse=\"\\n\"), \"\\n\")
 			})
 		})
 		t
 		sink()
 		res <- list( rq1d = rq1d, time = t )
 		saveRDS(res, file='rq1d.rds')
-		fh <- file(file.path(rq1d$TMPDIR,'ended.out'),'wt')
-		writeLines('ok', fh)
+		fh <- file(file.path(rq1d$TMPDIR,'",ENDFILE,"'),'wt')
+		writeLines(out, fh)
 		close(fh)
 	")
 
 	R_script <- file.path(gv$outDir,'Rscript.R')
 	write_textlines(R_script, Rcmd, mode="wt")
-	CMD <- paste(RSCRIPT, R_script, '2>&1', sep=" ")
-	if (OS == "windows") {
-		affinity <- sprintf("0x%X", sum(2^(0:(gv$ncpu - 1))))
-		system( paste0('cmd.exe /c start /min /affinity ',affinity,' /wait \"RnmrQuant1D Rscript\" ', CMD), wait = FALSE )
-	} else if (OS == "unix") {
-		system( paste0('taskset -c 0-',gv$ncpu-1, ' ', CMD), wait = FALSE )
-	} else {
-		system( CMD, wait = FALSE )
-	}
+
+	p <- processx::process$new(
+		command = RSCRIPT,
+		args = c(R_script),
+		stdout = "|",
+		stderr = "|",
+		windows_verbatim_args = FALSE
+	)
+
 	repeat {
 		Sys.sleep(1)
-		if (file.exists(file.path(rq1d$TMPDIR,rq1d$cluster_status_file))) break
+		if (!p$is_alive() || file.exists(file.path(rq1d$TMPDIR,rq1d$cluster_status_file))) break
 	}
-	ret <- file.exists(file.path(rq1d$TMPDIR,'ended.out'))
-	return (ret)
+	return (p)
+}
+
+
+get_response_factors <- function(rq1d, QStype, QSlist, thresfP, deconv, qbl, append=FALSE, verbose)
+{
+	js <- paste0("document.getElementById('calibmsg').textContent = 'Waiting - Response factor for ",QStype," : ")
+	QS <- list(sampletype=QStype, fPUL=list(mean=NULL, CV=0), fP=NULL, fR=NULL, MC=NULL, INTG=NULL, fK=NULL)
+	fPUL <- fK <- NULL
+	fCV <- 0
+	rq1d$PROFILE <- NULL
+	sink(file.path(rq1d$TMPDIR,'stds_QC-QS.txt'), append=append)
+	for (k in 1:length(QSlist)) {
+		S <- QSlist[k]
+		shinyjs::runjs(paste0(js, S, " (", k, "/", length(QSlist), ") ...';"))
+		out <- exe.catch({
+			rq1d$get_response_factors(QStype, S, thresfP=thresfP, deconv=deconv, qbl=qbl, verbose=2)
+		})
+		print(out$message)
+		cat("\n\n")
+		if (out$error_occurred) next
+		L <- out$result
+		if (is.na(L$fPUL$mean)) next
+		QS$fP <- rbind(QS$fP, L$fP)
+		QS$fR <- rbind(QS$fR, L$fR)
+		QS$INTG <- rbind(QS$INTG, L$INTG)
+		QS$MC <- L$MC
+		fK <- c(fK, L$fK)
+		fPUL <- c(fPUL, L$fPUL$mean)
+		if (is.na(L$fPUL$CV) || L$fPUL$CV>0) fCV <- L$fPUL$CV
+	}
+	sink()
+	QS$fK <- mean(fK)
+	QS$fPUL$mean <- mean(fPUL)
+	QS$fPUL$CV <- ifelse(is.na(fCV) || fCV==0, round(100*sd(fPUL)/mean(fPUL),2), fCV)
+	class(QS) <- 'QC-QS'
+	QS
 }

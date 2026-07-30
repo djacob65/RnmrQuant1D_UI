@@ -25,25 +25,37 @@ server <- function(input, output, session)
 		SampleFilename = '',        # the name of the uploaded Sample file
 		samples = NULL,             # the sample matrix
 		hasQCQS = FALSE,            # TRUE if QC/QS spectra are provided
-		PROFILE = '',               # file name of the quantification profile
-		STDS_FILE ='',              # file name of the calibration profile
+		PROFILE = NULL,             # file name of the quantification profile
+		STDS_FILE =NULL,              # file name of the calibration profile
 		max_ncpu = CORES            # Number of cores for parallel computing
 	)
 
 	# Reactive values
-	rv <- reactiveValues()
-	rv$load <- 0
-	rv$unzip <- 0
-	rv$loadbtn <- 1
-	rv$samples <- 0
-	rv$endproc <- FALSE
-	rv$reset <- FALSE
+	rv <- reactiveValues(
+		load = 0,                   # Files are loaded
+		okws = 0,                   # Workspace is OK
+		samples = 0,                # Samples Table is OK
+		endproc = FALSE,            # End of processing
+		reset = FALSE,              # Reset all
+		intgreset = FALSE,          # Reset Integration
+		calibreset = FALSE,         # Reset Calibration & Quantification
+		quantreset = FALSE,         # Reset Quantification
+		process_job = NULL          # processx object
+	)
 
-	lstbtn <- list(intg=1, quant=1)
+	# Pressure counters on the "Import / Launch" buttons
+	lstbtn <- list(load=1, calib=1, intg=1, quant=1)
 
+	# RnmrQuant1D instance
 	rq1d <- NULL
 	res <- NULL
 
+	# List of widgets by category – useful for enabling or disabling them during reset or running
+	intg_widgets <- c('sequence','externalIntg','intgprofile','externIntgFile','listcmpds','intgInvBtn','intgpattern','listsamples')
+	calib_widgets <- c('sequence2', 'deconv', 'optphc1', 'thresfP', 'qbl', 'externalCalib', 'calibprofile', 'externCalibFile')
+	quant_widgets <- c('externalQuant','quantprofile','externQuantFile','quantInvBtn','quantgpattern','listsamples2','listcmpds2')
+
+	# Load source code
 	source("Rsrc/Upload.R", local=TRUE)           # Upload files
 	source("Rsrc/Samples.R", local=TRUE)          # Samples tab
 	source("Rsrc/Calibration.R", local=TRUE)      # Calibration tab
@@ -56,7 +68,7 @@ server <- function(input, output, session)
 	# Handle application reload/stop events
 	# --------------------------
 
-	observeEvent(c(input$resetBtn1, input$resetBtn2), {
+	observeEvent(input$resetBtn1, {
 		if(! is.null(input$zipfile)) {
 			rv$reset <- TRUE
 			message(paste(date(),": Reload Session ..."))
@@ -72,6 +84,15 @@ server <- function(input, output, session)
 		}
 	})
 
+
+	# --------------------------
+	# Handle application closure
+	# --------------------------
+	observeEvent(rv$endproc, {
+		session$sendCustomMessage("proc_status", rv$endproc)
+	})
+
+
 	# --------------------------
 	# Gets Session Idenfier => SID
 	# --------------------------
@@ -86,6 +107,7 @@ server <- function(input, output, session)
 		}
 		shinyjs::runjs( paste0("window.history.replaceState(null,'RnmrQuant1D', '?", gv$sessid, "');") )
 	})
+
 
 	# --------------------------
 	# Manage Tabs

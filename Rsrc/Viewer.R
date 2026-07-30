@@ -35,7 +35,7 @@ gp <- list(
 ##---------------
 observeEvent( c(rv$samples, rv$endproc), {
 	if (! rv$samples || ! rv$endproc ) return(NULL)
-	v_options <- gv$compounds
+	v_options <- sort(gv$compounds)
 	names(v_options) <- v_options
 	updateSelectInput(session, "selcmpds", choices = v_options, selected=v_options)
 	samples <-rq1d$SAMPLES
@@ -66,6 +66,10 @@ infolist <- reactive({
 	}
 	infos <- infos[ infos[,1]==samples[idx,2] & infos[,3]==zone, , drop=F]
 	infos <- infos[, -c(7:10,12,13)]
+	if (! input$onlyintg)
+		infos <- cbind(infos, spec$TSPwidth)
+	infos[, ncol(infos)] <- as.character(infos[, ncol(infos)])
+	colnames(infos)[ncol(infos)] <- 'TSP width (Hz)'
 	peaklist <- rq1d$res$peaklist
 	peaklist <- peaklist[ peaklist[,2]==samples[idx,2] & peaklist[,3] %in% cmpds, 3:4, drop=F]
 	peaks <- spec$fit$peaks
@@ -86,13 +90,16 @@ infolist <- reactive({
 ##---------------
 observeEvent(input$logButton2, {
 	infos <- infolist()
-	if (input$onlyintg)
+	if (input$onlyintg) {
 		LogFile <- paste0(rq1d$TMPDIR,'/log-',infos$samples[infos$idx,2],'.txt')
-	else
+		title_log <- "Integration log"
+	} else {
 		LogFile <- paste0(rq1d$TMPDIR,'/output_',infos$samples[infos$idx,1],'_',infos$samples[infos$idx,3],'.txt')
+		title_log <- "Quantification log"
+	}
 	content <- readLines(LogFile, warn = FALSE)
 	showModal(modalDialog(
-		title = "Integration log",
+		title = title_log,
 		tags$pre(paste(content, collapse = "\n")),
 		easyClose = TRUE,
 		footer = modalButton("Close"),
@@ -175,4 +182,67 @@ output$spectrum<-renderPlotly({
 		gp$ylabel = gp$xlabel = '' 
 	}
 	rq1d$plot_cmpds(idx, input$selcmpds, gp)
+})
+
+
+##---------------
+# Export the RData file
+##---------------
+output$exportRData <- downloadHandler(
+	filename = function() { paste0('results_',gsub("\\.\\S+$","",basename(gv$NameZip)), '.RData' ) },
+	content = function(file) {
+		shinyjs::runjs( "document.getElementById('waitbox4').style.display = 'block';" )
+		if (!input$onlyintg) {
+			rq1d$get_spectra_data()
+		} else {
+			rq1d$quantpars$cmpdlist <- unique(sort(rq1d$PROFILE$quantif[ rq1d$PROFILE$quantif$zone %in% rq1d$res$zones, ]$compound))
+			rq1d$quantpars$zones <- rq1d$res$zones
+		}
+		save(rq1d, file=file)
+		shinyjs::runjs( "document.getElementById('waitbox4').style.display = 'none';" )
+	}
+)
+
+
+##---------------
+# Help on how to use the RData file
+##---------------
+observeEvent(input$help, {
+	if (!file.exists("conf/Rscript.txt")) return (NULL)
+	Rscript <- paste(readLines("conf/Rscript.txt"),collapse="\n")
+
+	PATH <- '/Path of the RData file'
+	S <- as.list(Sys.getenv())
+	if (!is.null(S$HOME)) {
+		PATH <- gsub("\\\\","/",S$HOME)
+		if (OS == "windows")
+			PATH <- file.path(dirname(PATH),'Downloads')
+	}
+	RData <- paste0("RData <- '",PATH,"/results_",gsub("\\.\\S+$","",basename(gv$NameZip)), ".RData'\n")
+
+	txt <-paste("### Full path of the RData file", RData, Rscript, sep="\n")
+
+	showModal(modalDialog(
+		title = "R script to use the RData file",
+		tags$textarea(
+			id = "helpText",
+			style = "width:100%;height:500px;",
+			readonly = TRUE,
+			txt
+		),
+		footer = tagList(
+			actionButton("copyText", "Copy-Paste", icon = icon("copy")),
+			modalButton("Close")
+		),
+		easyClose = TRUE
+	))
+
+})
+
+
+##---------------
+# Copy-paste the R script
+##---------------
+observeEvent(input$copyText, {
+	session$sendCustomMessage("copyToClipboard", "helpText")
 })

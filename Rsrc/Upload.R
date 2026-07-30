@@ -40,6 +40,9 @@ output$ZipUploaded <- reactive({
 		gv$Vendor <<- input$vendor
 		zipfile <- input$zipfile
 		gv$NameZip <<- zipfile$name
+		shinyjs::runjs( paste0("document.title ='",gsub("\\..*$", "", gv$NameZip),"';") )
+		output$title <- renderUI({ tags$h4(gsub("\\..*$", "", gv$NameZip)) })
+
 		gv$outDir <<- tempdir()
 		ext <- tolower(gsub("^.*\\.", "", gv$NameZip))
 		gv$RawZip <<- file.path(gv$outDir,paste0('raw.',ext))
@@ -56,7 +59,7 @@ output$ZipUploaded <- reactive({
 			tryCatch({
 				RAWDIR <- dirname(gv$RawZip)
 				if (ext=='7z') {
-					system(paste0("cd ",RAWDIR,"; ",conf$ZIP7," x -y ",gv$RawZip))
+					system(paste0("cd ",RAWDIR,"; \"",ZIP7,"\" x -y ",gv$RawZip))
 				} else {
 					unzip(gv$RawZip, files = NULL, list = FALSE, overwrite = TRUE, junkpaths = FALSE, exdir = RAWDIR, unzip = "internal", setTimes = FALSE)
 				}
@@ -111,8 +114,7 @@ observeEvent(input$samplefile, {
 ##---------------
 output$fileUploaded <- reactive({
 	input$goButton
-	rv$loadbtn
-	if (input$goButton<rv$loadbtn) return(0)
+	if (input$goButton<lstbtn$load) return(0)
 	if ( is.null(input$zipfile) || (!input$onlyintg && is.null(input$samplefile)) ) return (0)
 	closeAlert(session, "AlertUpLoadId")
 	isolate({
@@ -125,7 +127,7 @@ output$fileUploaded <- reactive({
 			})
 			if (nchar(msg)) {
 				dispAlert1(msg)
-				rv$loadbtn <- rv$loadbtn + 1
+				lstbtn$load <<- lstbtn$load + 1
 				rv$load <- 0
 				return(0)
 			}
@@ -142,7 +144,7 @@ output$fileUploaded <- reactive({
 			unlink(dirname(samplefile$datapath), recursive=TRUE)
 		}
 	})
-	rv$load <- input$goButton==rv$loadbtn
+	rv$load <- input$goButton==lstbtn$load
 	return(rv$load)
 })
 outputOptions(output, 'fileUploaded', suspendWhenHidden=FALSE)
@@ -157,7 +159,7 @@ output$fileProcessed <- reactive({
 	if ( is.null(gv$RawZip) ) return (0)
 	updateButton(session, "goButton", label = "Launch", style = "warning", disabled = TRUE)
 	shinyjs::runjs( "document.getElementById('waitbox1').style.display = 'block';" )
-	rv$unzip <- ret <- 0
+	rv$okws <- ret <- 0
 	closeAlert(session, "AlertUpLoadId")
 
 	repeat
@@ -178,7 +180,7 @@ output$fileProcessed <- reactive({
 		}
 		if (nchar(msg)) {
 			dispAlert1(msg)
-			rv$loadbtn <- rv$loadbtn + 1
+			lstbtn$load <<- lstbtn$load + 1
 			rv$load <- 0
 			break
 		}
@@ -236,7 +238,7 @@ output$fileProcessed <- reactive({
 			dir.create(gp$IMGDIR,  recursive = TRUE, showWarnings = FALSE)
 
 		# Ready to move on to the next step
-		rv$unzip <- ret <- 1
+		rv$okws <- ret <- 1
 		break
 	}
 

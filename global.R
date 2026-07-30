@@ -4,18 +4,17 @@
 # (C) 2026 - D. JACOB - INRAE
 #------------------------------------------------
 
-
 suppressMessages({
 	library(shiny)
 	library(shinyjs)
 	library(shinyBS)
 	library(shinyWidgets)
 	library(shinycssloaders)
+	library(htmlwidgets)
+	library(htmltools)
 	library(markdown)
 	library(plotly)
 	library(DT)
-	library(htmlwidgets)
-	library(htmltools)
 	library(openxlsx)
 	library(RnmrQuant1D)
 })
@@ -46,8 +45,11 @@ TITLE <- conf$TITLE
 CPRGHT <- conf$CPRGHT
 VERSION <- conf$VERSION
 
+# DEV mode
+DEV <- conf$DEV
+
 # Max size for the ZIP file
-MAXZIPSIZE <- 500
+MAXZIPSIZE <- 100
 if (is.numeric(conf$MAXZIPSIZE) && as.numeric(conf$MAXZIPSIZE)>0) {
     MAXZIPSIZE <- as.numeric(conf$MAXZIPSIZE)
 }
@@ -59,17 +61,10 @@ CORES <- ifelse(!is.null(conf$CORES), conf$CORES, 0)
 
 # Rscript
 RSCRIPT <- ifelse(!is.null(conf$RSCRIPT), conf$RSCRIPT, '')
-if (nchar(RSCRIPT)==0) {
-	if (OS == "windows") {
-		V <- sessionInfo()
-		RSCRIPT <-paste0("C:/Program Files/R/R-",V$R.version$major, ".", V$R.version$minor,"/bin/Rscript.exe")
-	} else {
-		RSCRIPT <- '/usr/bin/Rscript'
-	}
-}
 
 # 7zip
 ZIP7 <- ifelse(!is.null(conf$ZIP7), conf$ZIP7, '')
+
 if (OS == "windows") {
 	path <- tryCatch(
 		readRegistry("SOFTWARE\\R-core", maxdepth = 3),
@@ -77,14 +72,12 @@ if (OS == "windows") {
 	)
 	if (!is.null(path))
 		RSCRIPT <- paste0(path$R$InstallPath,"\\bin\\Rscript.exe")
-	if (nchar(RSCRIPT)) RSCRIPT <- paste0("\"",RSCRIPT,"\"")
 	path <- tryCatch(
 		readRegistry("SOFTWARE\\7-Zip", maxdepth = 3),
 		error=function(e){NULL}
 	)
 	if (!is.null(path))
 		ZIP7 <- paste0(path$Path64,"7z.exe")
-	if (nchar(ZIP7)) ZIP7 <- paste0("\"",ZIP7,"\"")
 }
 
 # See https://shiny.rstudio.com/reference/shiny/1.4.0/upgrade.html
@@ -107,3 +100,10 @@ COLSPEC <- c('gray70','#86c1db','deeppink4')
 
 # Compound colors
 COLCPMDS <- c('#5ba8c9','dodgerblue1','#5b75c9','slateblue2','#8334b8','steelblue1')
+
+
+# Message Log file of the core process
+OUTLOG <- 'rq1d.out'
+
+# Message file serving also as a semaphore
+ENDFILE <- 'ended.out'

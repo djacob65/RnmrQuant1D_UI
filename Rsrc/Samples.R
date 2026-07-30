@@ -9,9 +9,9 @@
 ## Output: Provides some information about loaded spectra
 ##---------------
 output$zipLog <- renderPrint({
-	if (rv$unzip==0) return (0)
+	if (rv$okws==0) return (0)
 	cat("----\n",
-		system(paste0(RSCRIPT," --version"), intern = TRUE),"\n",
+		system(paste0("\"",RSCRIPT,"\" --version"), intern = TRUE),"\n",
 		"Session Identifier = ", gv$sessid, "\n",
 		"Instrument/Vendor/Format = ", gv$Vendor, "\n",
 		"The original name of the Zip file = ", gv$NameZip, "\n",
@@ -24,10 +24,38 @@ output$zipLog <- renderPrint({
 
 
 ##---------------
+# Reset management
+##---------------
+observeEvent(input$samplesReset, {
+	showModal(modalDialog(
+		title = "Warning",
+		"Changing this setting will clear the current results. Continue?",
+		footer = tagList(
+			actionButton("cancel_samples", "Cancel"),
+			actionButton("confirm_samples", "Continue", class = "btn-danger")
+		),
+		easyClose = FALSE
+	))
+})
+
+observeEvent(input$confirm_samples, {
+	removeModal()
+	rv$reset <- TRUE
+	message(paste(date(),": Reload Session ..."))
+	session$reload()
+})
+
+observeEvent(input$cancel_samples, {
+	removeModal()
+	rv$reset <- FALSE
+})
+
+
+##---------------
 ## Fill in the sample table with the pulse and frequency values.
 ##---------------
 sampleTable <- reactive({
-	if (rv$unzip==0) return(NULL)
+	if (rv$okws==0) return(NULL)
 	if (gv$Vendor=='bruker') {
 		samplecode <- paste(gv$samples[,1], gv$samples[,3], sep = "-")
 	} else {
@@ -83,7 +111,7 @@ sampleTable <- reactive({
 ## Output: sampleTable
 ##---------------
 output$sampleTable <- renderDataTable({
-	if (rv$unzip==0) return(NULL)
+	if (rv$okws==0) return(NULL)
 	sampleTable()
 }, options = list(pageLength=10, autoWidth = F))
 

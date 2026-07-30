@@ -4,7 +4,6 @@
 # (C) 2026 - D. JACOB - INRAE
 #------------------------------------------------
 
-
 ##---------------
 ## Alert Box 3
 ##---------------
@@ -24,6 +23,9 @@ intgprofile <- reactive ({
 		ret <- namefile
 	} else {
 		ret <- input$intgprofile
+	}
+	if (nchar(ret)==0) {
+		ret <- NULL
 	}
 	return(ret)
 })
@@ -45,10 +47,19 @@ updateSamples <- reactive({
 updateIntg <- reactive({
 	if (! rv$samples ) return(NULL)
 	gv$PROFILE <<- intgprofile()
-	rq1d$PROFILE <<- rq1d$readProfile(file.path(gv$outDir, 'profiles', gv$PROFILE))
-	v_options <- unique(rq1d$PROFILE$quantif$compound)
-	names(v_options) <- v_options
-	updateSelectInput(session, "listcmpds", choices = v_options, selected=v_options)
+	if (!is.null(gv$PROFILE)) {
+		rq1d$PROFILE <<- rq1d$readProfile(file.path(gv$outDir, 'profiles', gv$PROFILE))
+		v_options <- unique(rq1d$PROFILE$quantif$compound)
+		names(v_options) <- v_options
+		updateSelectInput(session, "listcmpds", choices = v_options, selected=v_options)
+	}
+})
+
+
+##---------------
+#  Updates samples when entering in this tab
+##---------------
+observeEvent(input$outtabs, {
 	updateSamples()
 })
 
@@ -68,13 +79,50 @@ observeEvent(input$sequence, {
 
 
 ##---------------
+# Reset management
+##---------------
+observeEvent(input$intgReset, {
+	showModal(modalDialog(
+		title = "Warning",
+		"Changing this setting will clear the current results. Continue?",
+		footer = tagList(
+			actionButton("cancel_intg", "Cancel"),
+			actionButton("confirm_intg", "Continue", class = "btn-danger")
+		),
+		easyClose = FALSE
+	))
+})
+
+observeEvent(input$confirm_intg, {
+	removeModal()
+	rv$intgreset <- TRUE
+	shinyjs::disable("intgReset")
+	shinyjs::enable("intgButton")
+	for (widget in intg_widgets)
+		shinyjs::enable(widget)
+})
+
+observeEvent(input$cancel_intg, {
+	removeModal()
+	rv$intgreset <- FALSE
+	optionPulse <- unique(sort(gv$samples$Pulse))
+	names(optionPulse) <- toupper(optionPulse)
+	updateSelectInput(session, inputId='sequence', label = 'Sequence (PULSE)', choices = optionPulse, selected=rq1d$SEQUENCE)
+})
+
+observeEvent(input$intgButton, {
+	rv$intgreset <- FALSE
+})
+
+
+##---------------
 #  Updates samples and compounds based on the profile 
 ##---------------
 observeEvent(c(input$intgprofile, input$externIntgFile), {
 	rv$endproc <- FALSE
+	updateSamples()
 	updateIntg()
 })
-
 
 ##---------------
 #  Updates samples based on a pattern
@@ -89,10 +137,12 @@ observeEvent(input$intgpattern, {
 ##---------------
 observeEvent(input$intgInvBtn, {
 	rv$endproc <- FALSE
-	v_options <- rq1d$PROFILE$quantif$compound
-	names(v_options) <- v_options
-	cmpds <- v_options[ ! v_options %in% input$listcmpds ]
-	updateSelectInput(session, "listcmpds", choices = v_options, selected=cmpds)
+	if (!is.null(gv$PROFILE)) {
+		v_options <- sort(rq1d$PROFILE$quantif$compound)
+		names(v_options) <- v_options
+		cmpds <- v_options[ ! v_options %in% input$listcmpds ]
+		updateSelectInput(session, "listcmpds", choices = v_options, selected=cmpds)
+	}
 })
 
 
@@ -129,16 +179,17 @@ output$intgTable2 <- renderDT({
 # Show Quantification profile in a Modal Dialog Box
 ##---------------
 observeEvent(input$viewIntgBtn, {
-	showModal(modalDialog(
-		tags$br(),
-		DTOutput("intgTable1"),
-		tags$br(),tags$br(),
-		DTOutput("intgTable2"),
-		title = "Quantification profile",
-		easyClose = TRUE,
-		footer = modalButton("Close"),
-		size = "l"
-	))
+	if (!is.null(gv$PROFILE))
+		showModal(modalDialog(
+			tags$br(),
+			DTOutput("intgTable1"),
+			tags$br(),tags$br(),
+			DTOutput("intgTable2"),
+			title = "Quantification profile",
+			easyClose = TRUE,
+			footer = modalButton("Close"),
+			size = "l"
+		))
 })
 
 
@@ -175,49 +226,82 @@ intg.exe.catch  <- function(expr) {
 
 
 ##---------------
+# Display the number of selected samples.
+##---------------
+output$selintg <- renderText({
+	if (rv$samples==1 && length(input$listsamples)>0) {
+		if (input$onlyintg) {
+			samples <- gv$samples[ gv$samples$Pulse==input$sequence, ]
+		} else {
+			samples <- gv$samples[ ! gv$samples$Type %in% QCQS & gv$samples$Pulse==input$sequence, ]
+		}
+		paste0(length(input$listsamples),'/',nrow(samples))
+	}
+})
+
+
+##---------------
 # Launch Integration
 ##---------------
 output$outIntg <- renderPrint({
 	req(input$intgButton)
-	ret <- FALSE
 	rv$endproc <- FALSE
-	if (input$intgButton==lstbtn$intg) {
-		closeAlert(session, "AlertIntgId")
+
+	repeat {
+		if (input$intgButton!=lstbtn$intg || rv$intgreset)
+			break
+
+		lstbtn$intg <<- lstbtn$intg + 1
+
+		if (is.null(gv$PROFILE)) {
+			dispAlert3("Error: No quantification profile provided")
+			break
+		}
+
 		isolate({
-			rq1d$SAMPLES <<- gv$samples[ gv$samples[,2] %in% input$listsamples, ]
+			rq1d$SAMPLES <<- gv$samples[ gv$samples[,2] %in% input$listsamples & gv$samples$Pulse==input$sequence, ]
 			rq1d$SEQUENCE <<- input$sequence
 			rq1d$PROFILE <<- rq1d$readProfile(file.path(gv$outDir, 'profiles', gv$PROFILE))
 			gv$compounds <<- input$listcmpds
 			gv$zones <<- as.integer(unique(rq1d$PROFILE$quantif[ rq1d$PROFILE$quantif$compound %in% input$listcmpds, ]$zone))
 		})
+
+		if (is.null(gv$zones) || length(gv$zones)==0) {
+			dispAlert3("Error : No selected compounds")
+			break
+		}
+
+		if (is.null(rq1d$SAMPLES) || nrow(rq1d$SAMPLES)==0) {
+			dispAlert3("Error : No selected samples")
+			break
+		}
+
+		closeAlert(session, "AlertIntgId")
+
+		shinyjs::disable("samplesReset")
+		for (widget in intg_widgets)
+			shinyjs::disable(widget)
+
 		out <- intg.exe.catch({
 			rq1d$check_profile(verbose=TRUE)
 		})
-		ret <- TRUE
-		if (is.null(gv$zones) || length(gv$zones)==0) {
-			dispAlert3("Error : No selected compounds")
-			ret <- FALSE
-		}
-		if (is.null(rq1d$SAMPLES) || nrow(rq1d$SAMPLES)==0) {
-			dispAlert3("Error : No selected samples")
-			ret <- FALSE
-		}
-		if (ret) {
-			max_ncpu <- ifelse(gv$max_ncpu>0, gv$max_ncpu, parallel::detectCores())
-			gv$ncpu <- min(length(gv$zones), max_ncpu)
-			cat("\n")
-			cat(paste('Selected Zones : ', paste(gv$zones, collapse=",")),"\n")
-			cat(paste('Nb Cores =', gv$ncpu),"\n")
-			cat(paste('Nb Samples =', nrow(rq1d$SAMPLES)),"\n")
-			cat("\n")
-		}
-		lstbtn$intg <<- lstbtn$intg + 1
-	}
-	if (ret) {
+
+		max_ncpu <- ifelse(gv$max_ncpu>0, gv$max_ncpu, parallel::detectCores())
+		gv$ncpu <- min(length(gv$zones), max_ncpu)
+		cat("\n")
+		cat(paste('Selected Zones : ', paste(gv$zones, collapse=",")),"\n")
+		cat(paste('Nb Cores =', gv$ncpu),"\n")
+		cat(paste('Nb Samples =', nrow(rq1d$SAMPLES)),"\n")
+		cat("\n")
+
 		updateButton(session, "intgButton", label = "Launch Integration", style = "warning", disabled = TRUE)
+
 		# Initialize the cluster then launch the processing
+		session$sendCustomMessage("proc_status", TRUE)
 		intg_pb(paste('Initialize the cluster (',gv$ncpu,' cores) ...'), 0)
-		if (submit_rq1d_proc(rq1d, gv)) {
+		rv$process_job <- submit_rq1d_proc(rq1d, gv, proc='intg')
+
+		if (!rv$process_job$is_alive()) {
 			dispAlert3("ERROR: proc_Integrals failed !")
 		} else {
 			start.time <- Sys.time()
@@ -226,6 +310,10 @@ output$outIntg <- renderPrint({
 			repeat {
 				Sys.sleep(1)
 				n <-length(list.files(rq1d$TMPDIR, pattern = "\\.txt$"))
+				if (n<nrow(rq1d$SAMPLES) && !rv$process_job$is_alive()) {
+					dispAlert3(paste("ERROR: proc_Integrals failed : Spectrum concerned =",rq1d$SAMPLES[n,1]))
+					break
+				}
 				if (n==0 || n>nc) {
 					msg <- paste('Processing since ',round(as.numeric(Sys.time()-start.time, units="secs")),'secs (',n,'/',nrow(rq1d$SAMPLES),') ...')
 					intg_pb(msg, round(100*(n/nrow(rq1d$SAMPLES))))
@@ -233,18 +321,27 @@ output$outIntg <- renderPrint({
 				nc <- n
 				if (n==nrow(rq1d$SAMPLES)) break
 			}
-			# Monitor the completion of the results file writing process.
+			# Monitor the completion of the messages file writing process.
 			repeat {
-				if (length(list.files(rq1d$TMPDIR, pattern = "ended.out$"))) break
+				if (!rv$process_job$is_alive()) break
 				Sys.sleep(1)
 			}
-			rv$endproc <- TRUE
-			res <<- readRDS(file = file.path(gv$outDir,'rq1d.rds'))
-			rq1d <<- res$rq1d
+			if (n==nrow(rq1d$SAMPLES)) {
+				rv$endproc <- TRUE
+				res <<- readRDS(file = file.path(gv$outDir,'rq1d.rds'))
+				rq1d <<- res$rq1d
+			}
 		}
-		updateButton(session, "intgButton", label = "Launch Integration", style = "info", disabled = FALSE)
-		L <- readLines(file.path(gv$outDir,'rq1d.out'))
+
+		shinyjs::enable("intgReset")
+		shinyjs::enable("samplesReset")
+		updateButton(session, "intgButton", label = "Launch Integration", style = "info", disabled = TRUE)
+		L <- readLines(file.path(gv$outDir,OUTLOG))
 		for(l in L) cat(l,"\n")
+		L <- readLines(file.path(rq1d$TMPDIR,ENDFILE))
+		for(l in L) cat(l,"\n")
+
+		break
 	}
 })
 

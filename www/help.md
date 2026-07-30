@@ -1,23 +1,25 @@
 
-## **Quick Help**
+## Quick Help
 
 <br>
 
-#### **Funded by**
+#### Funded by
 
+* Agence Nationale de la Recherche - <a href="https://anr.fr/Project-ANR-21-CE21-0014" target="_blank">WAPNNMR ANR-21-CE21-0014</a>
 * <a href="https://www.bibs.inrae.fr/eng" target="_blank">INRAE UR BIA, BIBS</a>
 
-#### **Main contributors**
+#### Main contributors
 
 * Daniel Jacob
 
 
-#### **License**
+#### License
 
 * GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 - See <a href="http://www.gnu.org/licenses/" target="_blank">http://www.gnu.org/licenses/</a> for more details.
 
+<br>
 
-### **Purpose**
+### Purpose
 
 <div style="text-align: justify">
 
@@ -52,3 +54,6 @@ See <a href="https://github.com/djacob65/RnmrQuant1D/wiki" target="_blank">Tutor
 **Reference**
 
    * Guillaume Leleu et al. (2026 ) 1H-NMR analysis of wine metabolites: Method development and validation, molecules, 31 (1), <a href="https://doi.org/10.3390/molecules31010065" target="_blank"> doi:10.3390/molecules31010065</a>
+
+<br>
+<br>

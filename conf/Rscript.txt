@@ -1,0 +1,34 @@
+### Load the RData file, i.e. the rq1d object
+load(RData)
+
+### show list of compounds
+compounds <- rq1d$quantpars$cmpdlist
+compounds
+
+### show list of samples
+samplenames <- rq1d$SAMPLES[,2]
+samplenames
+
+# Graphic settings
+gp <- list(
+	lw = 1,
+	plotTrueSpec = FALSE,
+	plotzones = FALSE,
+	plotresidus = FALSE,
+	tags = 'none', # none, peak, id, name
+	showgrid = TRUE,
+	legendhoriz = TRUE,
+	legendtop = TRUE,
+	showlegend = TRUE,
+	yaxis = TRUE,
+	ylabel = '', # 'Intensity (a.u)'
+	xlabel = '', # 'Shift (ppm)'
+	verbose = FALSE,
+	colspecs = c('gray70','#86c1db','deeppink4'),
+	colcpmds = c('#5ba8c9','dodgerblue1','#5b75c9','slateblue2','#8334b8','steelblue1'),
+	font = list(family = 'Arial', size = 16),
+	font2 = list(family = 'Arial', size = 14)
+)
+
+### Ex: view spectra for sample 2 and for the zone including the compound 1
+rq1d$plot_cmpds(samplenames[2], compounds[1], gp)
