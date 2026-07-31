@@ -77,8 +77,11 @@ server <- function(input, output, session)
 	})
 
 	session$onSessionEnded(function() {
-		if (isolate(rv$reset))
+		if (!isolate(rv$reset)) {
+			stopApp()
+		} else {
 			empty_directory(gv$outDir)
+		}
 	})
 
 
