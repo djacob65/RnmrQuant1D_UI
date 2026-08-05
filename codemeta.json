@@ -4,15 +4,15 @@
     "license": "https://spdx.org/licenses/GPL-3.0",
     "codeRepository": "https://github.com/djacob65/RnmrQuant1D_UI",
     "dateCreated": "2026-07-02",
-    "datePublished": "2026-07-28",
-    "dateModified": "2026-07-25",
-    "downloadUrl": "",
+    "datePublished": "2026-08-03",
+    "dateModified": "2026-08-01",
+    "downloadUrl": "https://github.com/djacob65/RnmrQuant1D_UI/releases/tag/1.2.0",
     "issueTracker": "https://github.com/djacob65/RnmrQuant1D_UI/issues",
     "name": "RnmrQuant1D UI",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Application dedicated to 1D proton NMR quantification, including peak fitting and based on external calibration using standard spectra",
     "applicationCategory": "NMR spectra processing",
-    "releaseNotes": "Second version with numerous improvements",
+    "releaseNotes": "Third version with numerous improvements, including better background process management, editable quantification profile, settings configuration panel and code consolidation",
     "developmentStatus": "active",
     "funder": {
         "@type": "Organization",
@@ -31,7 +31,8 @@
         "Windows"
     ],
     "softwareRequirements": [
-        "R version >= 4.3"
+        "R version >= 4.3",
+        "RnmrQuant1D >= 1.2.6"
     ],
     "relatedLink": [
         "https://github.com/djacob65/RnmrQuant1D/wiki"

@@ -19,13 +19,24 @@ This <a href="https://shiny.posit.co/r/getstarted/" target="_blank">R Shiny</a> 
 
 	* R version >= 4.3
 	* RnmrQuant1D >= 1.2.6 (see https://github.com/djacob65/RnmrQuant1D)
-	* Other R packages : shiny, shinyjs, shinyBS, shinyWidgets, shinycssloaders, markdown
+	```r
+	if (!require("devtools"))
+		install.packages("devtools", repos="https://cran.rstudio.com")
+	devtools::install_github("djacob65/RnmrQuant1D", dependencies = TRUE)
+	```
 
+	* Other R packages : shiny, shinyjs, shinyBS, shinyWidgets, shinycssloaders, markdown, colourpicker
+	```r
+	install.packages(c('shiny','shinyjs','shinyBS','shinyWidgets','shinycssloaders',
+					'markdown','colourpicker'), repos = 'https://cran.rstudio.com')
+	```
 
 * Clone this repository, then `cd` to your clone path.
 
-            git clone git@github.com:djacob65/RnmrQuant1D_UI.git
-            cd RnmrQuant1D_UI
+		git clone git@github.com:djacob65/RnmrQuant1D_UI.git
+		cd RnmrQuant1D_UI
+
+* Otherwise, you can download the ZIP file (see <a href="https://github.com/djacob65/RnmrQuant1D_UI/releases" target="_blank">Releases</a>), then unzip it.
 
 <br>
 

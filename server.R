@@ -24,10 +24,13 @@ server <- function(input, output, session)
 		SampleFile = NULL,          # the full path name of the uploaded Sample file
 		SampleFilename = '',        # the name of the uploaded Sample file
 		samples = NULL,             # the sample matrix
+		fac_dilution = DIL_FAC,     # Default dilution factor value
 		hasQCQS = FALSE,            # TRUE if QC/QS spectra are provided
 		PROFILE = NULL,             # file name of the quantification profile
-		STDS_FILE =NULL,              # file name of the calibration profile
-		max_ncpu = CORES            # Number of cores for parallel computing
+		STDS_FILE =NULL,            # file name of the calibration profile
+		affinity = AFFINITY,        # CPU affinity
+		max_ncpu = CORES,           # Max number of cores for parallel computing
+		ncpu = 0                    # Number of cores used for parallel computing
 	)
 
 	# Reactive values
@@ -40,7 +43,10 @@ server <- function(input, output, session)
 		intgreset = FALSE,          # Reset Integration
 		calibreset = FALSE,         # Reset Calibration & Quantification
 		quantreset = FALSE,         # Reset Quantification
-		process_job = NULL          # processx object
+		process_job = NULL,         # processx object
+		running = FALSE,            # Job state
+		job_output = NULL,          # Job output
+		n_logs = 0                  # Number of processed samples 
 	)
 
 	# Pressure counters on the "Import / Launch" buttons
@@ -49,6 +55,9 @@ server <- function(input, output, session)
 	# RnmrQuant1D instance
 	rq1d <- NULL
 	res <- NULL
+
+	# Timestamping to measure the task execution time.
+	start.time <- 0
 
 	# List of widgets by category – useful for enabling or disabling them during reset or running
 	intg_widgets <- c('sequence','externalIntg','intgprofile','externIntgFile','listcmpds','intgInvBtn','intgpattern','listsamples')
@@ -61,7 +70,9 @@ server <- function(input, output, session)
 	source("Rsrc/Calibration.R", local=TRUE)      # Calibration tab
 	source("Rsrc/Integration.R", local=TRUE)      # Integration tab
 	source("Rsrc/Quantification.R", local=TRUE)   # Quantification tab
+	source("Rsrc/Process.R", local=TRUE)          # Process tracking
 	source("Rsrc/Viewer.R", local=TRUE)           # Spectra Viewer tab
+	source("Rsrc/Params.R", local=TRUE)           # Set parameters
 
 
 	# --------------------------
@@ -107,7 +118,6 @@ server <- function(input, output, session)
 		}
 		shinyjs::runjs( paste0("window.history.replaceState(null,'RnmrQuant1D', '?", gv$sessid, "');") )
 	})
-
 
 	# --------------------------
 	# Manage Tabs

@@ -48,8 +48,9 @@ updateSamples2 <- reactive({
 })
 
 updateQuant <- reactive({
-	if (! rv$samples ) return(NULL)
-	rq1d$SEQUENCE <<- input$sequence2
+	if (! rv$samples) return(NULL)
+	if (!is.null(input$sequence2) && nchar(input$sequence2))
+		rq1d$SEQUENCE <<- input$sequence2
 	gv$PROFILE <<- quantprofile()
 	if (!is.null(gv$PROFILE)) {
 		rq1d$PROFILE <<- rq1d$readProfile(file.path(gv$outDir, 'profiles', gv$PROFILE))
@@ -64,7 +65,7 @@ updateQuant <- reactive({
 ##---------------
 observeEvent(input$outtabs, {
 	updateSamples2()
-})
+}, ignoreInit = TRUE)
 
 
 ##---------------
@@ -74,7 +75,7 @@ observeEvent(c(input$quantprofile,input$externQuantFile), {
 	rv$endproc <- FALSE
 	updateSamples2()
 	updateQuant()
-})
+}, ignoreInit = TRUE)
 
 
 ##---------------
@@ -83,7 +84,7 @@ observeEvent(c(input$quantprofile,input$externQuantFile), {
 observeEvent(input$quantpattern, {
 	rv$endproc <- FALSE
 	updateSamples2()
-})
+}, ignoreInit = TRUE)
 
 
 ##---------------
@@ -99,7 +100,7 @@ observeEvent(input$quantReset, {
 		),
 		easyClose = FALSE
 	))
-})
+}, ignoreInit = TRUE)
 
 observeEvent(input$confirm_quant, {
 	removeModal()
@@ -108,12 +109,13 @@ observeEvent(input$confirm_quant, {
 	shinyjs::enable("quantButton")
 	for (widget in quant_widgets)
 		shinyjs::enable(widget)
-})
+	rv$job_output <- ''
+}, ignoreInit = TRUE)
 
 observeEvent(input$cancel_quant, {
 	removeModal()
 	rv$quantreset <- FALSE
-})
+}, ignoreInit = TRUE)
 
 observeEvent(input$quantButton, {
 	rv$quantreset <- FALSE
@@ -127,49 +129,63 @@ observeEvent(input$quantInvBtn, {
 	rv$endproc <- FALSE
 	gv$PROFILE <<- quantprofile()
 	if (!is.null(gv$PROFILE)) {
-		rq1d$PROFILE <<- rq1d$readProfile(file.path(gv$outDir, 'profiles', gv$PROFILE))
 		v_options <- sort(rq1d$PROFILE$quantif$compound)
 		names(v_options) <- v_options
 		cmpds <- v_options[ ! v_options %in% input$listcmpds2 ]
 		updateSelectInput(session, "listcmpds2", choices = v_options, selected=cmpds)
 	}
-})
+}, ignoreInit = TRUE)
 
 
 ##---------------
-# Quantification profile as a DataTable
-##---------------
-output$quantTable1 <- renderDT({
-	if (! rv$samples ) return(NULL)
-	updateQuant()
-	datatable(rq1d$PROFILE$fitting)
-})
-
-output$quantTable2 <- renderDT({
-	if (! rv$samples ) return(NULL)
-	updateQuant()
-	quantif <- rq1d$PROFILE$quantif
-	quantif$P4 <- NULL
-	datatable(quantif)
-})
-
-
-##---------------
-# Show Quantification profile in a Modal Dialog Box
+# Show/Edit Quantification profile in a Modal Dialog Box
 ##---------------
 observeEvent(input$viewQuantBtn, {
-	if (!is.null(gv$PROFILE))
+	if (!is.null(gv$PROFILE)) {
+		output$quantTable1 <- renderDT({
+			if (!is.null(rq1d$PROFILE))
+				datatable(rq1d$PROFILE$fitting,
+					options = list(pageLength = 10),
+					editable = list(target = "cell", disable = list(columns = c(9))))
+		})
+		output$quantTable2 <- renderDT({
+			if (!is.null(rq1d$PROFILE)) {
+				quantif <- rq1d$PROFILE$quantif
+				quantif$P4 <- NULL
+				datatable(quantif,
+					options = list(pageLength = 10),
+					editable = list(target = "cell", disable = list(columns = c(1,9))))
+			}
+		})
+		observeEvent(input$quantTable1_cell_edit, {
+			info <- input$quantTable1_cell_edit
+			rq1d$PROFILE$fitting[info$row, info$col] <<- info$value
+		})
+		observeEvent(input$quantTable2_cell_edit, {
+			info <- input$quantTable2_cell_edit
+			quantif <- rq1d$PROFILE$quantif
+			quantif$P4 <- NULL
+			quantif[info$row, info$col] <- info$value
+			quantif$P4 <- rq1d$PROFILE$quantif$P4
+			rq1d$PROFILE$quantif <<- quantif
+		})
 		showModal(modalDialog(
+			title = "Quantification profile",
 			tags$br(),
 			DTOutput("quantTable1"),
 			tags$br(),tags$br(),
 			DTOutput("quantTable2"),
-			title = "Quantification profile",
+			tags$br(),tags$br(),
+			HTML("See "), 
+			tags$a("Quantification profile", target = "_blank",	href = urls_doc$QUANTDOC),
+			HTML(" in the online documentation"),
+			tags$br(),tags$br(),
 			easyClose = TRUE,
 			footer = modalButton("Close"),
 			size = "l"
 		))
-})
+	}
+}, ignoreInit = TRUE)
 
 
 ##---------------
@@ -238,7 +254,6 @@ output$outQuant <- renderPrint({
 		isolate({
 			rq1d$SAMPLES <<- gv$samples[ gv$samples[,2] %in% input$listsamples2 & gv$samples$Pulse==input$sequence2, ]
 			rq1d$SEQUENCE <<- input$sequence2
-			rq1d$PROFILE <<- rq1d$readProfile(file.path(gv$outDir, 'profiles', gv$PROFILE))
 			gv$compounds <<- input$listcmpds2
 			gv$zones <<- as.integer(unique(rq1d$PROFILE$quantif[ rq1d$PROFILE$quantif$compound %in% input$listcmpds2, ]$zone))
 		})
@@ -265,7 +280,7 @@ output$outQuant <- renderPrint({
 		})
 
 		max_ncpu <- ifelse(gv$max_ncpu>0, gv$max_ncpu, parallel::detectCores())
-		gv$ncpu <- min(length(gv$zones), max_ncpu)
+		gv$ncpu <<- min(length(gv$zones), max_ncpu)
 		cat("\n")
 		cat(paste('Selected Zones : ', paste(gv$zones, collapse=",")),"\n")
 		cat(paste('Nb Cores =', gv$ncpu),"\n")
@@ -275,54 +290,57 @@ output$outQuant <- renderPrint({
 		updateButton(session, "quantButton", label = "Launch Quantification", style = "warning", disabled = TRUE)
 
 		# Initialize the cluster then launch the processing
-		session$sendCustomMessage("proc_status", TRUE)
+		rv$running <- TRUE
+		rv$n_logs <- 0
+		rv$job_output <- NULL
+		start.time <<- Sys.time()
 		quant_pb(paste('Initialize the cluster (',gv$ncpu,' cores) ...'), 0)
+		session$sendCustomMessage("proc_status", TRUE)
 		rv$process_job <- submit_rq1d_proc(rq1d, gv, proc='quant')
-
-		if (!rv$process_job$is_alive()) {
-			dispAlert4("ERROR: proc_Quantification failed !")
-		} else {
-			start.time <- Sys.time()
-			nc <- 0
-			# Monitor the number of output log files.
-			repeat {
-				Sys.sleep(1)
-				n <-length(list.files(rq1d$TMPDIR, pattern = "output_.+\\.txt$"))
-				if (n<nrow(rq1d$SAMPLES) && !rv$process_job$is_alive()) {
-					dispAlert4(paste("ERROR: proc_Quantification failed : Spectrum concerned =",rq1d$SAMPLES[n,1]))
-					break
-				}
-				if (n==0 || n>nc) {
-					msg <- paste('Processing since ',round(as.numeric(Sys.time()-start.time, units="secs")),'secs (',n,'/',nrow(rq1d$SAMPLES),') ...')
-					quant_pb(msg, round(100*(n/nrow(rq1d$SAMPLES))))
-				}
-				nc <- n
-				if (n==nrow(rq1d$SAMPLES)) break
-			}
-			# Monitor the completion of the results file writing process.
-			repeat {
-				if (!rv$process_job$is_alive()) break
-				Sys.sleep(1)
-			}
-			if (n==nrow(rq1d$SAMPLES)) {
-				rv$endproc <- TRUE
-				res <<- readRDS(file = file.path(gv$outDir,'rq1d.rds'))
-				rq1d <<- res$rq1d
-				rq1d$get_spectra_data()
-			}
-		}
-
-		shinyjs::enable("calibReset")
-		shinyjs::enable("samplesReset")
-		shinyjs::enable("quantReset")
-		updateButton(session, "quantButton", label = "Launch Quantification", style = "info", disabled = TRUE)
-		L <- readLines(file.path(gv$outDir,OUTLOG))
-		for(l in L) cat(l,"\n")
-		L <- readLines(file.path(rq1d$TMPDIR,ENDFILE))
-		for(l in L) cat(l,"\n")
 
 		break
 	}
+})
+
+
+##---------------
+# Display the job output
+##---------------
+output$outQuant2 <- renderPrint({
+	req(!rv$running)
+	if (length(nchar(rv$job_output))>1) {
+		rv$endproc <- TRUE
+		rv$running <- FALSE
+		for(l in rv$job_output) cat(l,"\n")
+	}
+})
+
+
+##---------------
+# STOP : Kills the process AND its children (cluster)
+##---------------
+observeEvent(input$quantStop, {
+	req(rv$process_job)
+	if (rv$process_job$is_alive()) {
+		rv$process_job$kill_tree()
+	}
+	dispAlert4(paste("Warning: Processing stopped by the user at",rv$n_logs,"/",nrow(rq1d$SAMPLES)))
+	shinyjs::enable("calibReset")
+	shinyjs::enable("samplesReset")
+	updateButton(session, "quantButton", label = "Launch Quantification", style = "info", disabled = TRUE)
+	rv$job_output <- NULL
+	if (file.exists(file.path(gv$outDir,OUTLOG)))
+		rv$job_output <- readLines(file.path(gv$outDir,OUTLOG))
+	if (file.exists(file.path(rq1d$TMPDIR,ENDFILE)))
+		rv$job_output <- c( rv$job_output , readLines(file.path(rq1d$TMPDIR,ENDFILE)))
+	rv$running <- FALSE
+	shinyjs::enable("quantReset")
+	rq1d$SAMPLES <<- rq1d$SAMPLES[1:(rv$n_logs-1), ]
+	rq1d$quantpars <<- list(cmpdlist=gv$compounds, zones=gv$zones, ncpu=gv$ncpu, 
+			tottime=as.numeric(Sys.time()-start.time, units="secs"))
+	rq1d$res$proctype <<- 'quantification'
+	rq1d$get_spectra_data()
+	rv$endproc <- TRUE
 })
 
 
@@ -333,7 +351,7 @@ output$exportWBquant <- downloadHandler(
 	filename = function() { paste0('WB_',gsub("\\.\\S+$","",basename(gv$NameZip)), '.xlsx' ) },
 	content = function(file) {
 		shinyjs::runjs( "document.getElementById('waitbox3').style.display = 'block';" )
-		filelist <- list(SAMPLEFILE=gv$SampleFilename, PROFILE=gv$PROFILE, CALIBRATION=gv$STDS_FILE)
+		filelist <- list(SAMPLEFILE=gv$SampleFilename, PROFILE=basename(gv$PROFILE), CALIBRATION=basename(gv$STDS_FILE))
 		out <- rq1d$get_output_results()
 		cmpds <-  gsub("(-| )","_",gv$compounds)
 		out$quantif <- out$quantif[ , colnames(out$quantif) %in% cmpds]

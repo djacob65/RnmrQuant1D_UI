@@ -61,18 +61,27 @@ sampleTable <- reactive({
 	} else {
 		samplecode <- paste(gv$samples[,1],1, sep="-")
 	}
+
 	if (! input$onlyintg) {
+		cols <- c('sequence','frequence','size')
 		DIR1 <- file.path(gv$outDir, 'samples')
 		samples_1 <- priv$get_list_spectrum(DIR1, priv$get_list_samples(DIR1))
 		lst1 <- match(samplecode, samples_1[,2])
 		lst1 <- lst1[!is.na(lst1)]
+		samples1 <- samples_1[lst1, ]
+		M1 <- samples_1[paste0(samples_1[,1],'-',samples_1[,3]) %in% samplecode, ][cols]
 		DIR2 <- file.path(gv$outDir, 'QC-QS')
 		samples_2 <- priv$get_list_spectrum(DIR2, priv$get_list_samples(DIR2))
 		lst2 <- match(samplecode, samples_2[,2])
 		lst2 <- lst2[!is.na(lst2)]
-		gv$samples$Pulse <<- c(samples_1$sequence[lst1] ,samples_2$sequence[lst2])
-		gv$samples$Frequence <<- round(c(as.numeric(samples_1$frequence[lst1]), as.numeric(samples_2$frequence[lst2])))
-		gv$samples$Size <<- c(as.numeric(samples_1$size[lst1]), as.numeric(samples_2$size[lst2]))
+		samples2 <- samples_2[lst2, ]
+		M2 <- samples_2[paste0(samples_2[,1],'-',samples_2[,3]) %in% samplecode, ][cols]
+		gv$samples <<- as.data.frame(rbind(
+			cbind(gv$samples[which(gv$samples$Type == sampleTypes[1]), ], M1),
+			cbind(gv$samples[which(gv$samples$Type != sampleTypes[1]), ], M2))
+		)
+		colnames(gv$samples)[ (ncol(gv$samples)-2):ncol(gv$samples) ] <<- c('Pulse','Frequence','Size')
+		gv$samples$Frequence <<- round(as.numeric(gv$samples$Frequence))
 	} else {
 		samples <- priv$get_list_spectrum(gv$outDir, priv$get_list_samples(gv$outDir))
 		lst <- match(samplecode, samples[,2])

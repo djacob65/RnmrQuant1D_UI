@@ -103,8 +103,10 @@ observeEvent(input$samplefile, {
 	if (! is.null(input$zipfile) && ! is.null(input$samplefile)) {
 		samples <- open_samples_file(input$samplefile$datapath)
 		if (! "character" %in% class(samples))
-			if (! 'Type' %in% colnames(samples) || sum(c('QS','QS') %in% samples$Type)==0)
+			if (! 'Type' %in% colnames(samples) || sum(c('QS','QS') %in% samples$Type)==0) {
 				updateCheckboxInput(session, "onlyintg", "Only integration", value = TRUE)
+				shinyjs::disable("onlyintg")
+			}
 	}
 })
 
@@ -121,7 +123,7 @@ output$fileUploaded <- reactive({
 		if (input$onlyintg && is.null(input$samplefile)) {
 			msg <- ''
 			samples <- tryCatch({
-				get_samples_metadata(gv$outDir, input$vendor, input$onlyintg)
+				get_samples_metadata(gv, input$vendor, input$onlyintg)
 			}, error=function(cond) {
 				msg <- paste(cond, collapse="\n")
 			})
@@ -170,6 +172,7 @@ output$fileProcessed <- reactive({
 		priv <<- rq1d$.__enclos_env__$private
 		rq1d$RAWDIR <<- gv$outDir
 		gv$hasQCQS  <<- FALSE
+		rq1d$TYPE <<- '-'
 
 		# Check sample list provided by the user
 		gv$samples <<- open_samples_file(gv$SampleFile)
@@ -257,7 +260,7 @@ output$exportTMPL <- downloadHandler(
 	filename = function() { paste0('samples_',gsub("\\.\\S+$","",basename(gv$NameZip)), '.txt' ) },
 	content = function(file) {
 		shinyjs::runjs( "document.getElementById('waitbox1').style.display = 'block';" )
-		samples <- get_samples_metadata(gv$outDir, input$vendor, input$onlyintg)
+		samples <- get_samples_metadata(gv, input$vendor, input$onlyintg)
 		write.table(samples, file, quote = FALSE, sep = "\t",  dec = ".", row.names = FALSE)
 		shinyjs::runjs( "document.getElementById('waitbox1').style.display = 'none';" )
 	}

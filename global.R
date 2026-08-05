@@ -10,12 +10,14 @@ suppressMessages({
 	library(shinyBS)
 	library(shinyWidgets)
 	library(shinycssloaders)
+	library(colourpicker)
 	library(htmlwidgets)
 	library(htmltools)
 	library(markdown)
 	library(plotly)
 	library(DT)
 	library(openxlsx)
+	library(processx)
 	library(RnmrQuant1D)
 })
 
@@ -59,6 +61,9 @@ options(shiny.sanitize.errors = FALSE)
 # NB MAX CORES (0 means Auto)
 CORES <- ifelse(!is.null(conf$CORES), conf$CORES, 0)
 
+# Set affinity
+AFFINITY <- ifelse(!is.null(conf$AFFINITY), conf$AFFINITY, 0)
+
 # Rscript
 RSCRIPT <- ifelse(!is.null(conf$RSCRIPT), conf$RSCRIPT, '')
 
@@ -80,11 +85,8 @@ if (OS == "windows") {
 		ZIP7 <- paste0(path$Path64,"7z.exe")
 }
 
-# See https://shiny.rstudio.com/reference/shiny/1.4.0/upgrade.html
-#options(shiny.jquery.version = 1)
-
 # Dilution factor by default
-fac_dilution <- ifelse(!is.null(conf$DILUTION_FAC), as.numeric(conf$DILUTION_FAC), 0.8)
+DIL_FAC <- ifelse(!is.null(conf$DILUTION_FAC), as.numeric(conf$DILUTION_FAC), 0.8)
 
 if (nchar(ZIP7))
 	zipext <- c('zip', '7z')
@@ -92,15 +94,23 @@ else
 	zipext <- c('zip')
 
 # Type names for Samples, QC, QS
-QCQS <-c( ifelse(!is.null(conf$QC), conf$QC, 'QC'), ifelse(!is.null(conf$QS), conf$QS, 'QS') )
-sampleTypes <- c( ifelse(!is.null(conf$SAMPLE), conf$SAMPLE, 'Sample'), QCQS )
+QCtype <- ifelse(!is.null(conf$QC), conf$QC, 'QC')
+QStype <- ifelse(!is.null(conf$QS), conf$QS, 'QS')
+SAMPLEtype <- ifelse(!is.null(conf$SAMPLE), conf$SAMPLE, 'Sample')
+QCQS <-c( QCtype, QStype )
+sampleTypes <- c( SAMPLEtype, QCQS )
+
+# Online documentation
+urls_doc <- list(
+	CALIBDOC = conf$CALIBDOC,
+	QUANTDOC = conf$QUANTDOC
+)
 
 # Spectra colors : original, model, residus
 COLSPEC <- c('gray70','#86c1db','deeppink4')
 
 # Compound colors
-COLCPMDS <- c('#5ba8c9','dodgerblue1','#5b75c9','slateblue2','#8334b8','steelblue1')
-
+COLCPMDS <- c('#5ba8c9','dodgerblue1','#5b75c9','slateblue2','#8334b8','#A6B03A')
 
 # Message Log file of the core process
 OUTLOG <- 'rq1d.out'

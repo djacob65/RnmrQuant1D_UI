@@ -1,6 +1,12 @@
 @echo off
 setlocal
 
+@echo off
+if "%~1"=="MINIMIZED" goto :RUN
+start "" /min cmd /c "%~f0" MINIMIZED
+exit /b
+
+:RUN
 set PORT=80
 
 for /f "tokens=2,*" %%A in ('reg query "HKLM\SOFTWARE\R-core\R" /v "InstallPath" 2^>nul') do set "RPATH=%%B"
@@ -31,7 +37,9 @@ echo  Total P-cores         : %PCORES%
 echo ============================================================
 echo.
 
-start "" http://127.0.0.1:%PORT%
+start ""  http://127.0.0.1:%PORT%
+REM start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" http://127.0.0.1:%PORT%
+REM start "" "C:\Program Files\Mozilla Firefox\firefox.exe" http://127.0.0.1:%PORT%
+REM start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" http://127.0.0.1:%PORT%
 title RnmrQuant1D
 "%RPATH%\bin\Rscript.exe" -e "shiny::runApp(port=%PORT%, launch.browser=FALSE, host='127.0.0.1')"
-

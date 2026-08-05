@@ -46,6 +46,7 @@ updateSamples <- reactive({
 
 updateIntg <- reactive({
 	if (! rv$samples ) return(NULL)
+	rq1d$SEQUENCE <<- input$sequence
 	gv$PROFILE <<- intgprofile()
 	if (!is.null(gv$PROFILE)) {
 		rq1d$PROFILE <<- rq1d$readProfile(file.path(gv$outDir, 'profiles', gv$PROFILE))
@@ -75,7 +76,7 @@ observeEvent(input$sequence, {
 		lstfiles <- lstfiles[grep(rq1d$FIELD, lstfiles)]
 		updateSelectInput(session, "intgprofile", label = "Quantification profile", choices = lstfiles)
 	}
-})
+}, ignoreInit = TRUE)
 
 
 ##---------------
@@ -91,7 +92,7 @@ observeEvent(input$intgReset, {
 		),
 		easyClose = FALSE
 	))
-})
+}, ignoreInit = TRUE)
 
 observeEvent(input$confirm_intg, {
 	removeModal()
@@ -100,7 +101,8 @@ observeEvent(input$confirm_intg, {
 	shinyjs::enable("intgButton")
 	for (widget in intg_widgets)
 		shinyjs::enable(widget)
-})
+	rv$job_output <- ''
+}, ignoreInit = TRUE)
 
 observeEvent(input$cancel_intg, {
 	removeModal()
@@ -108,7 +110,7 @@ observeEvent(input$cancel_intg, {
 	optionPulse <- unique(sort(gv$samples$Pulse))
 	names(optionPulse) <- toupper(optionPulse)
 	updateSelectInput(session, inputId='sequence', label = 'Sequence (PULSE)', choices = optionPulse, selected=rq1d$SEQUENCE)
-})
+}, ignoreInit = TRUE)
 
 observeEvent(input$intgButton, {
 	rv$intgreset <- FALSE
@@ -122,7 +124,7 @@ observeEvent(c(input$intgprofile, input$externIntgFile), {
 	rv$endproc <- FALSE
 	updateSamples()
 	updateIntg()
-})
+}, ignoreInit = TRUE)
 
 ##---------------
 #  Updates samples based on a pattern
@@ -130,7 +132,7 @@ observeEvent(c(input$intgprofile, input$externIntgFile), {
 observeEvent(input$intgpattern, {
 	rv$endproc <- FALSE
 	updateSamples()
-})
+}, ignoreInit = TRUE)
 
 ##---------------
 #  Inverses selection of the compounds
@@ -143,54 +145,58 @@ observeEvent(input$intgInvBtn, {
 		cmpds <- v_options[ ! v_options %in% input$listcmpds ]
 		updateSelectInput(session, "listcmpds", choices = v_options, selected=cmpds)
 	}
-})
+}, ignoreInit = TRUE)
 
 
 ##---------------
-#  Show / hide "Spectra Viewer" depending on processing status
-##---------------
-observeEvent(rv$endproc, {
-	if (rv$endproc)
-		showTab(inputId = "outtabs", target = "viewer")
-	else
-		hideTab(inputId = "outtabs", target = "viewer")
-})
-
-
-##---------------
-# Quantification profile as a DataTable
-##---------------
-output$intgTable1 <- renderDT({
-	if (! rv$samples ) return(NULL)
-	updateIntg()
-	datatable(rq1d$PROFILE$fitting)
-})
-
-output$intgTable2 <- renderDT({
-	if (! rv$samples ) return(NULL)
-	updateIntg()
-	quantif <- rq1d$PROFILE$quantif
-	quantif$P4 <- NULL
-	datatable(quantif)
-})
-
-
-##---------------
-# Show Quantification profile in a Modal Dialog Box
+# Show/Edit Quantification profile in a Modal Dialog Box
 ##---------------
 observeEvent(input$viewIntgBtn, {
-	if (!is.null(gv$PROFILE))
+	if (!is.null(gv$PROFILE)) {
+		output$intgTable1 <- renderDT({
+			if (!is.null(rq1d$PROFILE))
+				datatable(rq1d$PROFILE$fitting,
+					options = list(pageLength = 10),
+					editable = list(target = "cell", disable = list(columns = c(9))))
+		})
+		output$intgTable2 <- renderDT({
+			if (!is.null(rq1d$PROFILE)) {
+				quantif <- rq1d$PROFILE$quantif
+				quantif$P4 <- NULL
+				datatable(quantif, 
+					options = list(pageLength = 10),
+					editable = list(target = "cell", disable = list(columns = c(1,9))))
+			}
+		})
+		observeEvent(input$intgTable1_cell_edit, {
+			info <- input$intgTable1_cell_edit
+			rq1d$PROFILE$fitting[info$row, info$col] <<- info$value
+		})
+		observeEvent(input$intgTable2_cell_edit, {
+			info <- input$intgTable2_cell_edit
+			quantif <- rq1d$PROFILE$quantif
+			quantif$P4 <- NULL
+			quantif[info$row, info$col] <- info$value
+			quantif$P4 <- rq1d$PROFILE$quantif$P4
+			rq1d$PROFILE$quantif <<- quantif
+		})
 		showModal(modalDialog(
+			title = "Quantification profile",
 			tags$br(),
 			DTOutput("intgTable1"),
 			tags$br(),tags$br(),
 			DTOutput("intgTable2"),
-			title = "Quantification profile",
+			tags$br(),tags$br(),
+			HTML("See "), 
+			tags$a("Quantification profile", target = "_blank",	href = urls_doc$QUANTDOC),
+			HTML(" in the online documentation"),
+			tags$br(),tags$br(),
 			easyClose = TRUE,
 			footer = modalButton("Close"),
 			size = "l"
 		))
-})
+	}
+}, ignoreInit = TRUE)
 
 
 ##---------------
@@ -245,7 +251,7 @@ output$selintg <- renderText({
 
 
 ##---------------
-# Launch Integration
+# Launch Integration process
 ##---------------
 output$outIntg <- renderPrint({
 	req(input$intgButton)
@@ -265,7 +271,6 @@ output$outIntg <- renderPrint({
 		isolate({
 			rq1d$SAMPLES <<- gv$samples[ gv$samples[,2] %in% input$listsamples & gv$samples$Pulse==input$sequence, ]
 			rq1d$SEQUENCE <<- input$sequence
-			rq1d$PROFILE <<- rq1d$readProfile(file.path(gv$outDir, 'profiles', gv$PROFILE))
 			gv$compounds <<- input$listcmpds
 			gv$zones <<- as.integer(unique(rq1d$PROFILE$quantif[ rq1d$PROFILE$quantif$compound %in% input$listcmpds, ]$zone))
 		})
@@ -301,52 +306,47 @@ output$outIntg <- renderPrint({
 		updateButton(session, "intgButton", label = "Launch Integration", style = "warning", disabled = TRUE)
 
 		# Initialize the cluster then launch the processing
-		session$sendCustomMessage("proc_status", TRUE)
+		rv$running <- TRUE
+		rv$n_logs <- 0
+		start.time <<- Sys.time()
 		intg_pb(paste('Initialize the cluster (',gv$ncpu,' cores) ...'), 0)
+		session$sendCustomMessage("proc_status", TRUE)
 		rv$process_job <- submit_rq1d_proc(rq1d, gv, proc='intg')
-
-		if (!rv$process_job$is_alive()) {
-			dispAlert3("ERROR: proc_Integrals failed !")
-		} else {
-			start.time <- Sys.time()
-			nc <- 0
-			# Monitor the number of output log files.
-			repeat {
-				Sys.sleep(1)
-				n <-length(list.files(rq1d$TMPDIR, pattern = "\\.txt$"))
-				if (n<nrow(rq1d$SAMPLES) && !rv$process_job$is_alive()) {
-					dispAlert3(paste("ERROR: proc_Integrals failed : Spectrum concerned =",rq1d$SAMPLES[n,1]))
-					break
-				}
-				if (n==0 || n>nc) {
-					msg <- paste('Processing since ',round(as.numeric(Sys.time()-start.time, units="secs")),'secs (',n,'/',nrow(rq1d$SAMPLES),') ...')
-					intg_pb(msg, round(100*(n/nrow(rq1d$SAMPLES))))
-				}
-				nc <- n
-				if (n==nrow(rq1d$SAMPLES)) break
-			}
-			# Monitor the completion of the messages file writing process.
-			repeat {
-				if (!rv$process_job$is_alive()) break
-				Sys.sleep(1)
-			}
-			if (n==nrow(rq1d$SAMPLES)) {
-				rv$endproc <- TRUE
-				res <<- readRDS(file = file.path(gv$outDir,'rq1d.rds'))
-				rq1d <<- res$rq1d
-			}
-		}
-
-		shinyjs::enable("intgReset")
-		shinyjs::enable("samplesReset")
-		updateButton(session, "intgButton", label = "Launch Integration", style = "info", disabled = TRUE)
-		L <- readLines(file.path(gv$outDir,OUTLOG))
-		for(l in L) cat(l,"\n")
-		L <- readLines(file.path(rq1d$TMPDIR,ENDFILE))
-		for(l in L) cat(l,"\n")
 
 		break
 	}
+})
+
+
+##---------------
+# Display the job output
+##---------------
+output$outIntg2 <- renderPrint({
+	req(!rv$running)
+	if (length(nchar(rv$job_output))>1)
+		for(l in rv$job_output) cat(l,"\n")
+})
+
+
+##---------------
+# STOP : Kills the process AND its children (cluster)
+##---------------
+observeEvent(input$intgStop, {
+	req(rv$process_job)
+	if (rv$process_job$is_alive()) {
+		rv$process_job$kill_tree()
+	}
+	dispAlert3(paste("Warning: Processing stopped by the user at",rv$n_logs,"/",nrow(rq1d$SAMPLES)))
+	shinyjs::enable("samplesReset")
+	for (widget in intg_widgets)
+		shinyjs::enable(widget)
+	updateButton(session, "intgButton", label = "Launch Integration", style = "info", disabled = FALSE)
+	rv$job_output <- NULL
+	if (file.exists(file.path(gv$outDir,OUTLOG)))
+		rv$job_output <- readLines(file.path(gv$outDir,OUTLOG))
+	if (file.exists(file.path(rq1d$TMPDIR,ENDFILE)))
+		rv$job_output <- c( rv$job_output , readLines(file.path(rq1d$TMPDIR,ENDFILE)))
+	rv$running <- FALSE
 })
 
 

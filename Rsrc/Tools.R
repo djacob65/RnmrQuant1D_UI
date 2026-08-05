@@ -108,6 +108,82 @@ exe.catch <- function(expr)
 	)
 }
 
+
+#----
+# Check if a pattern is valid
+#----
+is_regex_valide <- function(pattern)
+{
+	tryCatch({
+		grepl(pattern, "test", perl = TRUE)
+		TRUE
+	}, error = function(e) {
+		FALSE
+	}, warning = function(w) {
+		FALSE
+	})
+}
+
+
+#----
+# Check if file has a XLSX format
+#----
+is_xlsx <- function(file)
+{
+	con <- file(file, "rb")
+	sig <- readBin(con, "raw", n = 4)
+	close(con)  
+	# Signature ZIP : 50 4B 03 04
+	identical(sig, as.raw(c(0x50, 0x4B, 0x03, 0x04)))
+}
+
+
+#----
+# Get the template of sample metadata depending on the operation type
+#----
+get_samples_metadata <- function(gv, vendor, onlyintg)
+{
+	switch( vendor,
+		'bruker' = { colstr <- c("Spectrum", "Samplename", "EXPNO") },
+		'varian' = { colstr <- c("Spectrum", "Samplename") },
+		'jeol'   = { colstr <- c("Spectrum", "Samplename") }
+	)
+
+	rq1d <- RnmrQuant1D$new(vendor)
+	priv <- rq1d$.__enclos_env__$private
+
+	samples <- priv$get_list_spectrum(gv$outDir, priv$get_list_samples(gv$outDir))
+	if (!onlyintg) {
+		samples <- cbind( samples[,1:length(colstr), drop=F], rep(sampleTypes[1], nrow(samples)), rep(gv$fac_dilution, nrow(samples)) )
+		colnames(samples) <- c( colstr, 'Type', rq1d$FDILfield)
+		samples$Type[grep(QCQS[1], samples[,1])] <- QCQS[1]
+		samples$Type[grep(QCQS[2], samples[,1])] <- QCQS[2]
+	} else {
+		samples <- samples[,1:length(colstr), drop=F]
+		colnames(samples) <- colstr
+	}
+	samples 
+}
+
+
+#----
+# Open the sample file, regardless of its format (TSV or XLSX).
+#----
+open_samples_file <- function(samplefile)
+{
+	out <- tryCatch({
+		if (is_xlsx(samplefile)) {
+			openxlsx::read.xlsx(samplefile, sheet=1)
+		} else {
+			as.data.frame(utils::read.table(samplefile, sep="\t", header=T,stringsAsFactors=FALSE))
+		}
+	}, error=function(cond) {
+		out <- paste(cond, collapse="\n")
+	})
+	return(out)
+}
+
+
 #----
 # Check if the content of the sample metadata file is compliant with the operation type
 #----
@@ -191,86 +267,56 @@ check_samples_metadata <- function(rq1d, samples, sdir, vendor, onlyintg)
 
 
 #----
-# Get the template of sample metadata depending on the operation type
+# Compute the response factor for the 'QStype' type based on the 'QSlist' spectra
 #----
-get_samples_metadata <- function(sdir, vendor, onlyintg)
+get_response_factors <- function(rq1d, QStype, QSlist, thresfP, deconv, qbl, append=FALSE, verbose)
 {
-	switch( vendor,
-		'bruker' = { colstr <- c("Spectrum", "Samplename", "EXPNO") },
-		'varian' = { colstr <- c("Spectrum", "Samplename") },
-		'jeol'   = { colstr <- c("Spectrum", "Samplename") }
-	)
-
-	rq1d <- RnmrQuant1D$new(vendor)
-	priv <- rq1d$.__enclos_env__$private
-
-	samples <- priv$get_list_spectrum(sdir, priv$get_list_samples(sdir))
-	if (!onlyintg) {
-		samples <- cbind( samples[,1:length(colstr)], rep(sampleTypes[1], nrow(samples)), rep(fac_dilution, nrow(samples)) )
-		colnames(samples) <- c( colstr, 'Type', rq1d$FDILfield)
-		samples$Type[grep(QCQS[1], samples[,1])] <- QCQS[1]
-		samples$Type[grep(QCQS[2], samples[,1])] <- QCQS[2]
-	} else {
-		samples <- samples[,1:length(colstr)]
-		colnames(samples) <- colstr
+	js <- paste0("document.getElementById('calibmsg').textContent = 'Waiting - Response factor for ",QStype," : ")
+	QS <- list(sampletype=QStype, fPUL=list(mean=NULL, CV=0), fP=NULL, fR=NULL, MC=NULL, INTG=NULL, fK=NULL)
+	fPUL <- fK <- NULL
+	fCV <- 0
+	rq1d$PROFILE <- NULL
+	sink(file.path(rq1d$TMPDIR,'stds_QC-QS.txt'), append=append)
+	for (k in 1:length(QSlist)) {
+		S <- QSlist[k]
+		shinyjs::runjs(paste0(js, S, " (", k, "/", length(QSlist), ") ...';"))
+		out <- exe.catch({
+			rq1d$get_response_factors(QStype, S, thresfP=thresfP, deconv=deconv, qbl=qbl, verbose=2)
+		})
+		print(out$message)
+		cat("\n\n")
+		if (out$error_occurred) next
+		L <- out$result
+		if (is.na(L$fPUL$mean)) next
+		QS$fP <- rbind(QS$fP, L$fP)
+		QS$fR <- rbind(QS$fR, L$fR)
+		QS$INTG <- rbind(QS$INTG, L$INTG)
+		QS$MC <- L$MC
+		fK <- c(fK, L$fK)
+		fPUL <- c(fPUL, L$fPUL$mean)
+		if (is.na(L$fPUL$CV) || L$fPUL$CV>0) fCV <- L$fPUL$CV
 	}
-	samples 
-}
-
-#----
-# Check if file has a XLSX format
-#----
-is_xlsx <- function(file)
-{
-	con <- file(file, "rb")
-	sig <- readBin(con, "raw", n = 4)
-	close(con)  
-	# Signature ZIP : 50 4B 03 04
-	identical(sig, as.raw(c(0x50, 0x4B, 0x03, 0x04)))
-}
-
-#----
-# Open the sample file, regardless of its format (TSV or XLSX).
-#----
-open_samples_file <- function(samplefile)
-{
-	out <- tryCatch({
-		if (is_xlsx(samplefile)) {
-			openxlsx::read.xlsx(samplefile, sheet=1)
-		} else {
-			as.data.frame(utils::read.table(samplefile, sep="\t", header=T,stringsAsFactors=FALSE))
-		}
-	}, error=function(cond) {
-		out <- paste(cond, collapse="\n")
-	})
-	return(out)
-}
-
-#----
-# Check if a pattern is valid
-#----
-is_regex_valide <- function(pattern)
-{
-	tryCatch({
-		grepl(pattern, "test", perl = TRUE)
-		TRUE
-	}, error = function(e) {
-		FALSE
-	}, warning = function(w) {
-		FALSE
-	})
+	sink()
+	if (!is.null(fPUL)) {
+		QS$fK <- mean(fK)
+		QS$fPUL$mean <- mean(fPUL)
+		QS$fPUL$CV <- ifelse(is.na(fCV) || fCV==0, round(100*sd(fPUL)/mean(fPUL),2), fCV)
+		class(QS) <- 'QC-QS'
+	} else {
+		QS <- NULL
+	}
+	QS
 }
 
 
 #----
-# Run a rq1d task in an independent process
+# Run a rq1d task in an independent thread
 #----
 submit_rq1d_proc <- function(rq1d, gv, proc='intg', reset=TRUE)
 {
 	unlink(file.path(rq1d$TMPDIR,"log-*.txt"))
 	unlink(file.path(rq1d$TMPDIR,"output_*.txt"))
 	unlink(file.path(rq1d$TMPDIR,ENDFILE))
-	unlink(file.path(rq1d$TMPDIR,rq1d$cluster_status_file))
 	saveRDS(rq1d, file=file.path(gv$outDir,'rq1d.rds'))
 
 	zones <- paste(gv$zones, collapse=",")
@@ -314,56 +360,31 @@ submit_rq1d_proc <- function(rq1d, gv, proc='intg', reset=TRUE)
 	R_script <- file.path(gv$outDir,'Rscript.R')
 	write_textlines(R_script, Rcmd, mode="wt")
 
+	# Command preparation with/without affinity setting, according to the OS
+	if (gv$affinity==0)
+		OS <- "unknown"
+	if (OS == "unix") {
+		L <- list(cmd = "taskset", args = c("-c", paste(0:(gv$ncpu-1),collapse=","), RSCRIPT, R_script))
+	} else if (OS == "windows") {
+		ps_cmd <- sprintf(
+			'$p = Start-Process -FilePath "%s" -ArgumentList "%s" -WindowStyle Hidden -PassThru;
+			$p.ProcessorAffinity = %d; $p.WaitForExit()',
+			RSCRIPT, R_script, sum(2^(0:(gv$ncpu-1)))
+		)
+		L <- list(cmd="powershell", args = c("-NoProfile", "-Command", ps_cmd))
+	} else {
+		L <- list(cmd=RSCRIPT, args = c(R_script))
+	}
+
 	p <- processx::process$new(
-		command = RSCRIPT,
-		args = c(R_script),
+		command = L$cmd,
+		args = c(L$args),
 		stdout = "|",
 		stderr = "|",
-		windows_verbatim_args = FALSE
+		cleanup_tree = TRUE,
+		supervise = TRUE
 	)
 
-	repeat {
-		Sys.sleep(1)
-		if (!p$is_alive() || file.exists(file.path(rq1d$TMPDIR,rq1d$cluster_status_file))) break
-	}
 	return (p)
 }
 
-
-#----
-# Compute the response factor for the 'QStype' type based on the 'QSlist' spectra
-#----
-get_response_factors <- function(rq1d, QStype, QSlist, thresfP, deconv, qbl, append=FALSE, verbose)
-{
-	js <- paste0("document.getElementById('calibmsg').textContent = 'Waiting - Response factor for ",QStype," : ")
-	QS <- list(sampletype=QStype, fPUL=list(mean=NULL, CV=0), fP=NULL, fR=NULL, MC=NULL, INTG=NULL, fK=NULL)
-	fPUL <- fK <- NULL
-	fCV <- 0
-	rq1d$PROFILE <- NULL
-	sink(file.path(rq1d$TMPDIR,'stds_QC-QS.txt'), append=append)
-	for (k in 1:length(QSlist)) {
-		S <- QSlist[k]
-		shinyjs::runjs(paste0(js, S, " (", k, "/", length(QSlist), ") ...';"))
-		out <- exe.catch({
-			rq1d$get_response_factors(QStype, S, thresfP=thresfP, deconv=deconv, qbl=qbl, verbose=2)
-		})
-		print(out$message)
-		cat("\n\n")
-		if (out$error_occurred) next
-		L <- out$result
-		if (is.na(L$fPUL$mean)) next
-		QS$fP <- rbind(QS$fP, L$fP)
-		QS$fR <- rbind(QS$fR, L$fR)
-		QS$INTG <- rbind(QS$INTG, L$INTG)
-		QS$MC <- L$MC
-		fK <- c(fK, L$fK)
-		fPUL <- c(fPUL, L$fPUL$mean)
-		if (is.na(L$fPUL$CV) || L$fPUL$CV>0) fCV <- L$fPUL$CV
-	}
-	sink()
-	QS$fK <- mean(fK)
-	QS$fPUL$mean <- mean(fPUL)
-	QS$fPUL$CV <- ifelse(is.na(fCV) || fCV==0, round(100*sd(fPUL)/mean(fPUL),2), fCV)
-	class(QS) <- 'QC-QS'
-	QS
-}

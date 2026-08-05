@@ -20,16 +20,8 @@ ui <- fluidPage(
 	tags$head(
 		tags$link(rel="icon", href="images/favicon.ico"),
 		tags$link(rel="stylesheet", type="text/css",href="style.css"),
-		tags$script(HTML(paste0(HEAD_JS,
-			'var out_confirm=false; window.onbeforeunload = function(){ if(out_confirm) return true;}
-			Shiny.addCustomMessageHandler("proc_status",function(value){
-				out_confirm = value;
-			});
-			Shiny.addCustomMessageHandler("copyToClipboard", function(id){
-				var txt = document.getElementById(id);txt.select();txt.setSelectionRange(0,99999);
-				navigator.clipboard.writeText(txt.value);
-			});'
-		)))
+		tags$script(HTML(HEAD_JS)),
+		tags$script(type="text/javascript", src = "js/tools.js")
 	),
 
 	shinyjs::useShinyjs(debug = TRUE, html = FALSE),
@@ -173,21 +165,25 @@ ui <- fluidPage(
 					column(12,
 						tags$br(), tags$br(),
 						fluidRow(
-							conditionalPanel(condition="output.endIntg==0",
+							conditionalPanel(condition="output.running==0 && output.endIntg==0",
 								bsButton("intgButton", label = "Launch Integration", style="info", icon = icon("rocket")),
 							),
-							conditionalPanel(condition="output.endIntg==1",
+							conditionalPanel(condition="output.running==0 && output.endIntg==1",
 								bsButton("intgButton", label = "Launch Integration", style="info", icon = icon("rocket")),
 								downloadButton("exportWBintg", "Export Workbook", class="expbtn"),
 								bsButton("intgReset", label = "Reset", style="info", disabled = TRUE),
 								tags$div( id="waitbox2", class="waitbox", style="display: none;")
+							),
+							conditionalPanel(condition="output.running==1",
+								bsButton("intgButton", label = "Launch Integration", style="info", icon = icon("rocket")),
+								bsButton("intgStop", label = "Stop", style="danger", icon = icon("circle-stop"))
 							)
 						)
 					),
 					column(12, tags$br(), bsAlert("AlertIntg")),
 					column(12,
 						tags$br(),
-						conditionalPanel(condition="$('html').hasClass('shiny-busy')", tags$div(id="progressbar",
+						conditionalPanel(condition="output.running==1", tags$div(id="progressbar",
 							HTML('<table border=0 CELLPADDING=0 CELLSPACING=0>
 								<tr><td colspan=2 style="font-weight:bold;"><span id="pbtitle"></span></td></tr>
 								<tr><td id="pbleft" style="background-color: #337ab7; width: 0px; height: 10px;"></td>
@@ -196,6 +192,7 @@ ui <- fluidPage(
 								</tr></table>')
 						)),
 						verbatimTextOutput("outIntg"),
+						verbatimTextOutput("outIntg2"),
 						tags$br(), tags$br(), tags$br(), tags$br()
 					)
 				)),
@@ -247,9 +244,9 @@ ui <- fluidPage(
 						),
 						column(12,
 							tags$br(),
-							conditionalPanel(condition="$('html').hasClass('shiny-busy')", tags$div(id="progressbar",
-								HTML('&nbsp;<span style="font-size:12pt;color:blueviolet;font-weight:bold;" id="calibmsg">Running ...</span>')
-							))
+							tags$div(id="progressbar",
+								HTML('&nbsp;<span style="font-size:12pt;color:blueviolet;font-weight:bold;" id="calibmsg"></span>')
+							)
 						)
 					)),
 					column(12, tags$br(), bsAlert("AlertCalib")),
@@ -312,21 +309,25 @@ ui <- fluidPage(
 					column(12,
 						tags$br(), tags$br(),
 						fluidRow(
-							conditionalPanel(condition="output.endQuant==0",
+							conditionalPanel(condition="output.running==0 && output.endQuant==0",
 								bsButton("quantButton", label = "Launch Quantification", style="info", icon = icon("rocket"))
 							),
-							conditionalPanel(condition="output.endQuant==1",
+							conditionalPanel(condition="output.running==0 && output.endQuant==1",
 								bsButton("quantButton", label = "Launch Quantification", style="info", icon = icon("rocket")),
 								downloadButton("exportWBquant", "Export Workbook", class="expbtn"),
 								tags$div( id="waitbox3", class="waitbox", style="display: none;"),
 								bsButton("quantReset", label = "Reset", style="info", disabled = TRUE)
+							),
+							conditionalPanel(condition="output.running==1",
+								bsButton("quantButton", label = "Launch Quantification", style="info", icon = icon("rocket")),
+								bsButton("quantStop", label = "Stop", style="danger", icon = icon("circle-stop"))
 							)
 						)
 					),
 					column(12, tags$br(), bsAlert("AlertQuant")),
 					column(12,
 						tags$br(),
-						conditionalPanel(condition="$('html').hasClass('shiny-busy')", tags$div(id="progressbar2",
+						conditionalPanel(condition="output.running==1", tags$div(id="progressbar2",
 							HTML('<table border=0 CELLPADDING=0 CELLSPACING=0>
 								<tr><td colspan=2 style="font-weight:bold;"><span id="pbtitle2"></span></td></tr>
 								<tr><td id="pbleft2" style="background-color: #337ab7; width: 0px; height: 10px;"></td>
@@ -335,6 +336,7 @@ ui <- fluidPage(
 								</tr></table>')
 						)),
 						verbatimTextOutput("outQuant"),
+						verbatimTextOutput("outQuant2"),
 						tags$br(), tags$br(), tags$br(), tags$br()
 					)
 				)),
@@ -368,24 +370,35 @@ ui <- fluidPage(
 								tags$br(), tags$br(), tags$br(), tags$br()
 						),
 						column(6, style="width: 58%;",
-							column(12,
-								column(2,
-									radioButtons("tags", "Tags:", c("None" = "none", "Peak Id" = "peak", "Name" = "name"),
-										inline = FALSE)
+							tags$div(
+								tags$span( id = "toggle_icon", HTML("&#9658;"),
+									onclick = "toggleOptionsPanel()",
+									style = "cursor: pointer; font-size: 15px;"
 								),
-								column(2,
-									radioButtons("showlegend", "Legend:", c("None" = "none", "Top" = "top", "Bottom" = "bottom"),
-										selected='bottom', inline = FALSE)
-								),
-								column(2,
-									checkboxInput("showgrid", "Show gridlines", TRUE),
-									checkboxInput("axislbl", "Show axis labels", FALSE),
-									checkboxInput("yaxis", "Show Y axis", TRUE)
-								),
-								column(3,
-									checkboxInput("showpeaklist", "Show peaklist", FALSE),
-									checkboxInput("residus", "Plot with residus", FALSE),
-									checkboxInput("specbl", "Spectrum with BL correction", FALSE)
+								tags$span("Settings", style = "cursor: pointer; font-weight: bold; font-size: 13px;",
+									onclick = "toggleOptionsPanel()"),
+									style = "margin-bottom: 5px;"
+							),
+							tags$div( id = "options_panel", style = "display: none;",
+								column(12,
+									column(2,
+										radioButtons("tags", "Tags:", c("None" = "none", "Peak Id" = "peak", "Name" = "name"),
+											inline = FALSE)
+									),
+									column(2,
+										radioButtons("showlegend", "Legend:", c("None" = "none", "Top" = "top", "Bottom" = "bottom"),
+											selected='bottom', inline = FALSE)
+									),
+									column(2,
+										checkboxInput("showgrid", "Show gridlines", TRUE),
+										checkboxInput("axislbl", "Show axis labels", FALSE),
+										checkboxInput("yaxis", "Show Y axis", TRUE)
+									),
+									column(3,
+										checkboxInput("showpeaklist", "Show peaklist", FALSE),
+										checkboxInput("residus", "Plot with residus", FALSE),
+										checkboxInput("specbl", "Spectrum with BL correction", T)
+									)
 								)
 							),
 							column(12,

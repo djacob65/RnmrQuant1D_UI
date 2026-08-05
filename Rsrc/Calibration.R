@@ -130,8 +130,7 @@ observeEvent(input$calibButton, {
 ##---------------
 calibResults <- eventReactive(input$calibButton, {
 	calibObj()
-	if (input$calibButton && ! is.null(gv$STDS_FILE))
-	{
+	if (input$calibButton && ! is.null(gv$STDS_FILE)) {
 		session$sendCustomMessage("proc_status", TRUE)
 		shinyjs::disable("samplesReset")
 		for (widget in calib_widgets)
@@ -142,49 +141,50 @@ calibResults <- eventReactive(input$calibButton, {
 		OPTPHC1 <- rq1d$procParams$OPTPHC1
 		rq1d$procParams$OPTPHC0 <<- !input$optphc1;
 		rq1d$procParams$OPTPHC1 <<- input$optphc1;
+		quantProfile <- rq1d$PROFILE
 
-		t <- system.time({
-			QSlist <- unique(gv$samples[ gv$samples$Type == QCQS[2] & gv$samples$Pulse==rq1d$SEQUENCE, 1])
-			QS <- get_response_factors(rq1d, rq1d$QStype, QSlist, thresfP=input$thresfP, deconv=input$deconv, qbl=input$qbl, append=FALSE, verbose=1)
+		repeat {
+			t <- system.time({
+				QSlist <- unique(gv$samples[ gv$samples$Type == QCQS[2] & gv$samples$Pulse==rq1d$SEQUENCE, 1])
+				QS <- get_response_factors(rq1d, rq1d$QStype, QSlist, thresfP=input$thresfP, deconv=input$deconv, qbl=input$qbl, append=FALSE, verbose=1)
+				if (is.null(QS)) break
 
-			QClist <- unique(gv$samples[ gv$samples$Type == QCQS[1] & gv$samples$Pulse==rq1d$SEQUENCE, 1])
-			QC <- get_response_factors(rq1d, rq1d$QCtype, QClist, thresfP=input$thresfP, deconv=input$deconv, qbl=input$qbl, append=TRUE, verbose=1)
+				QClist <- unique(gv$samples[ gv$samples$Type == QCQS[1] & gv$samples$Pulse==rq1d$SEQUENCE, 1])
+				QC <- get_response_factors(rq1d, rq1d$QCtype, QClist, thresfP=input$thresfP, deconv=input$deconv, qbl=input$qbl, append=TRUE, verbose=1)
+				if (is.null(QC)) break	
+			})
+	
+			shinyjs::runjs(paste0("document.getElementById('calibmsg').textContent = 'Waiting : Response factor for QC estimation ...';"))
+			QS_df  <- calib.exe.catch({ rq1d$get_factor_table(QS) })
+			QC_df  <- calib.exe.catch({ rq1d$get_factor_table(QC) })
+			QC_tab <- calib.exe.catch({ rq1d$get_QC_estimation(QC, QS) })
+			if (sum(is.na(QC_tab[,2]))==0)
+				Yest <- lm(data=as.data.frame(QC_tab), Estimated~Real)
+			else
+				Yest <- NULL
+	
+			rq1d$fP <<- list(QSname=QSlist, Mat=QS_df, values=QS$fP, CV=QS$fPUL$CV, mean=QS$fPUL$mean, fK=QS$fK, elapsed=round(as.numeric(t[3]),2))
+			shinyjs::runjs(paste0("document.getElementById('calibmsg').textContent = '';"))
+			shinyjs::enable("quantButton")
+			for (widget in quant_widgets)
+				shinyjs::enable(widget)
+			break
+		}
 
-			rq1d$procParams$OPTPHC0 <<- OPTPHC0;
-			rq1d$procParams$OPTPHC1 <<- OPTPHC1;
-		})
+		rq1d$procParams$OPTPHC0 <<- OPTPHC0;
+		rq1d$procParams$OPTPHC1 <<- OPTPHC1;
+		rq1d$PROFILE <<- quantProfile
 
-		shinyjs::runjs(paste0("document.getElementById('calibmsg').textContent = 'Waiting : Response factor for QC estimation ...';"))
-		QS_df  <- calib.exe.catch({ rq1d$get_factor_table(QS) })
-		QC_df  <- calib.exe.catch({ rq1d$get_factor_table(QC) })
-		QC_tab <- calib.exe.catch({ rq1d$get_QC_estimation(QC, QS) })
-		if (sum(is.na(QC_tab[,2]))==0)
-			Yest <- lm(data=as.data.frame(QC_tab), Estimated~Real)
-		else
-			Yest <- NULL
-
-		rq1d$fP <<- list(QSname=QSlist, Mat=QS_df, values=QS$fP, CV=QS$fPUL$CV, mean=QS$fPUL$mean, fK=QS$fK, elapsed=round(as.numeric(t[3]),2))
-
+		updateButton(session, "calibButton", label = "Launch Calibration", style = "info", disabled = TRUE)
 		shinyjs::enable("logButton")
 		shinyjs::enable("samplesReset")
 		shinyjs::enable("calibReset")
-		shinyjs::enable("quantButton")
-		for (widget in quant_widgets)
-			shinyjs::enable(widget)
-		updateButton(session, "calibButton", label = "Launch Calibration", style = "info", disabled = TRUE)
-		list(QS=QS, QC=QC, QS_df=QS_df, QC_df=QC_df, QC_tab=QC_tab, Yest=Yest)
+
+		if (!is.null(QC) && !is.null(QS))
+			list(QS=QS, QC=QC, QS_df=QS_df, QC_df=QC_df, QC_tab=QC_tab, Yest=Yest)
+		else
+			NULL
 	}
-})
-
-
-##---------------
-# Calibration profile as a DataTable
-##---------------
-output$calibTable <- renderDT({
-	if (! gv$hasQCQS ) return(NULL)
-	STDS_FILE <- file.path(gv$outDir, 'profiles', calibprofile())
-	STDS <- data.frame(read.table(STDS_FILE, header=T, sep="\t", dec=".", stringsAsFactors=F))
-	datatable(STDS)
 })
 
 
@@ -192,14 +192,30 @@ output$calibTable <- renderDT({
 # Show Calibration profile in a Modal Dialog Box
 ##---------------
 observeEvent(input$viewCalibBtn, {
-	if (!is.null(gv$STDS_FILE))
+	if (is.null(gv$STDS_FILE)) {
+		calibfile <- calibprofile()
+		if (!is.null(calibfile))
+			gv$STDS_FILE <<- file.path(gv$outDir, 'profiles', calibfile)
+	}
+	if (!is.null(gv$STDS_FILE)) {
+		output$calibTable <- renderDT({
+			STDS <- data.frame(read.table(gv$STDS_FILE, header=T, sep="\t", dec=".", stringsAsFactors=F))
+			datatable(STDS)
+		})
 		showModal(modalDialog(
 			title = "Calibration profile",
+			tags$br(),
 			DTOutput("calibTable"),
+			tags$br(),tags$br(),
+			HTML("See "),
+			tags$a("Calibration profile", target = "_blank", href = urls_doc$CALIBDOC), 
+			HTML(" in the online documentation"),
+			tags$br(),tags$br(),
 			easyClose = TRUE,
 			footer = modalButton("Close"),
 			size = "l"
 		))
+	}
 })
 
 
@@ -265,6 +281,10 @@ output$outPulcon <- renderUI({
 
 		#  Compute PULCON factors for QC & QS
 		res <- calibResults()
+		if (is.null(res)) {
+			dispAlert2("Error: something went wrong")
+			break
+		}
 
 		if (sum(is.na(res$QC_tab[,2]))>0) {
 			dispAlert2("Error: CV threshold seems to low !")
@@ -274,8 +294,8 @@ output$outPulcon <- renderUI({
 			)
 			break
 		}
-
-		showTab(inputId = "outtabs", target = "quant")
+		if ( nrow(gv$samples[ ! gv$samples$Type %in% QCQS, ])>0 )
+			showTab(inputId = "outtabs", target = "quant")
 		ret <- TRUE
 		break
 	}
@@ -306,7 +326,7 @@ output$outPulcon <- renderUI({
 output$QC_estimation <- renderPlotly({
 	if (! gv$hasQCQS || ! input$calibButton || rv$calibreset) return(NULL)
 	res <- calibResults()
-	if (!is.null(gv$STDS_FILE))
+	if (!is.null(res) && !is.null(gv$STDS_FILE))
 		rq1d$plot_QC_estimation(res$QC_tab)
 })
 
