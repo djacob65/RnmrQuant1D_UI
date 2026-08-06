@@ -116,7 +116,7 @@ server <- function(input, output, session)
 		if (nchar(gv$sessid)==0) {
 			gv$sessid <<- paste0('_',paste(sample(c(0:9, letters[1:6]),30, replace=TRUE),collapse=""))
 		}
-		shinyjs::runjs( paste0("window.history.replaceState(null,'RnmrQuant1D', '?", gv$sessid, "');") )
+		#shinyjs::runjs( paste0("window.history.replaceState(null,'RnmrQuant1D', '?", gv$sessid, "');") )
 	})
 
 	# --------------------------

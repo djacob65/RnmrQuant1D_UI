@@ -119,7 +119,7 @@ sampleTable <- reactive({
 ##---------------
 ## Output: sampleTable
 ##---------------
-output$sampleTable <- renderDataTable({
+output$sampleTable <- renderDT({
 	if (rv$okws==0) return(NULL)
 	sampleTable()
 }, options = list(pageLength=10, autoWidth = F))

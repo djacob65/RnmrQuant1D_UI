@@ -44,20 +44,35 @@ This <a href="https://shiny.posit.co/r/getstarted/" target="_blank">R Shiny</a> 
 
 Either you open a R terminal, then you enter the following command:
 
-           setwd('/path_to_the_RnmrQuant1D_UI_directory')
+           setwd('/path_to_the_RnmrQuant1D_UI_directory/app')
            shiny::runApp(launch.browser=TRUE)
 
 or from a shell/batch console (cmd or bash), enter the following command:
 
-           cd /path_to_the_RnmrQuant1D_UI_directory
+           cd /path_to_the_RnmrQuant1D_UI_directory/app
            Rscript -e 'shiny::runApp(launch.browser=TRUE)'
 
-or for _Windows_ users, click on the _runApp.bat_ file into the explorer
+or for _Windows_ users, click on the _runApp.bat_ file into the explorer - Don't forget to set the execution rights in the properties,
+
+or for _Linux_ users, run the _runApp.sh_ file.
 
 <br>
 
+## Docker
 
-### Funded by:
+A Dockerfile is provided for Linux and macOS operating systems, provided that Docker is installed. To perform the build, run the following command - it can take about a quarter of an hour :
+
+           docker build -t rnmrquant1d .
+
+To run the image as a container, execute the following command:
+
+           docker run -d -p 80:3838 -v /tmp:/tmp --name rq1d rnmrquant1d
+
+Then, in your web navigator, the application is accessible to the URL : http://127.0.0.1
+
+<br>
+
+## Funded by:
 
 * Agence Nationale de la Recherche - [ANR-21-CE21-0014](https://anr.fr/Project-ANR-21-CE21-0014)
 * [INRAE, UR BIA, plate-forme BIBS](https://www.bibs.inrae.fr/eng)

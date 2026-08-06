@@ -66,32 +66,40 @@ AFFINITY <- ifelse(!is.null(conf$AFFINITY), conf$AFFINITY, 0)
 
 # Rscript
 RSCRIPT <- ifelse(!is.null(conf$RSCRIPT), conf$RSCRIPT, '')
+if (nchar(RSCRIPT)==0) {
+	if (OS == "windows") {
+		path <- tryCatch( readRegistry("SOFTWARE\\R-core", maxdepth = 3),
+				error=function(e){NULL} )
+		if (!is.null(path))
+			RSCRIPT <- paste0(path$R$InstallPath,"\\bin\\Rscript.exe")
+	}
+	if (OS == "unix")
+		RSCRIPT <- system("which Rscript", intern=TRUE, ignore.stderr=TRUE)
+}
 
 # 7zip
 ZIP7 <- ifelse(!is.null(conf$ZIP7), conf$ZIP7, '')
-
-if (OS == "windows") {
-	path <- tryCatch(
-		readRegistry("SOFTWARE\\R-core", maxdepth = 3),
-		error=function(e){NULL}
-	)
-	if (!is.null(path))
-		RSCRIPT <- paste0(path$R$InstallPath,"\\bin\\Rscript.exe")
-	path <- tryCatch(
-		readRegistry("SOFTWARE\\7-Zip", maxdepth = 3),
-		error=function(e){NULL}
-	)
-	if (!is.null(path))
-		ZIP7 <- paste0(path$Path64,"7z.exe")
+if (nchar(ZIP7)==0) {
+	if (OS == "windows") {
+		path <- tryCatch( readRegistry("SOFTWARE\\7-Zip", maxdepth = 3),
+			error=function(e){NULL} )
+		if (!is.null(path))
+			ZIP7 <- paste0(path$Path64,"\\7z.exe")
+	}
+	if (OS == "unix")
+		ZIP7 <- system("which 7zip", intern=TRUE, ignore.stderr=TRUE)
+	if (length(ZIP7)==1 && nchar(ZIP7)>0) {
+		ZIPEXT <- c('zip', '7z')
+		ZIPMINE <- c( 'application/zip', '.7z' )
+	} else {
+		ZIPEXT <- c('zip')
+		ZIPMINE <- c( 'application/zip' )
+	}
 }
+
 
 # Dilution factor by default
 DIL_FAC <- ifelse(!is.null(conf$DILUTION_FAC), as.numeric(conf$DILUTION_FAC), 0.8)
-
-if (nchar(ZIP7))
-	zipext <- c('zip', '7z')
-else
-	zipext <- c('zip')
 
 # Type names for Samples, QC, QS
 QCtype <- ifelse(!is.null(conf$QC), conf$QC, 'QC')

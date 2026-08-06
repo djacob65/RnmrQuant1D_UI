@@ -50,7 +50,7 @@ ui <- fluidPage(
 						selectInput("vendor", "Instrument/Vendor/Format:",  selectVendor, selected = "sinput"),
 						tags$br(),
 						conditionalPanel(condition="output.FormatSelected==1",
-							fileInput( 'zipfile', 'ZIP file', accept = c( 'application/zip', '.7z' ) )
+							fileInput( 'zipfile', 'ZIP file', accept = ZIPMINE )
 						),
 						tags$br(),
 						conditionalPanel(condition="output.ZipUploaded==1",
@@ -106,7 +106,7 @@ ui <- fluidPage(
 				tabPanel('Samples', value = "inpfiles", tags$div(class="tabs",
 					column(12,
 						verbatimTextOutput("zipLog"),
-						dataTableOutput("sampleTable"),
+						DTOutput("sampleTable"),
 						bsButton("samplesReset", label = "Reset", style="info", disabled = FALSE)
 					),
 					tags$br(), tags$br(),tags$br(), tags$br()

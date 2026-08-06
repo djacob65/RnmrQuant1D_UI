@@ -329,7 +329,7 @@ submit_rq1d_proc <- function(rq1d, gv, proc='intg', reset=TRUE)
 		rq1d_cmd <- paste0("rq1d$proc_Quantification(NULL, c(",zones,"), ncpu=",gv$ncpu,", reset=",reset,", progress=FALSE, verbose=1)")
 	}
 
-	Rcmd <- paste0("# Compounds: ",cmpds,"
+	Rcmd <- paste0("# RSCRIPT: ",RSCRIPT,", Affinity = ",gv$affinity,", Nb cores = ",gv$ncpu,"
 		setwd(\"",gsub("\\\\", "/", gv$outDir),"\")
 		rq1d <- readRDS('rq1d.rds')
 		sink('",OUTLOG,"')

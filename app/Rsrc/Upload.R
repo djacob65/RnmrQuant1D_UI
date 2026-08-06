@@ -50,9 +50,9 @@ output$ZipUploaded <- reactive({
 		unlink(dirname(zipfile$datapath), recursive=TRUE)
 		repeat {
 			# Check if is an archive file
-			if ( !(ext %in% zipext)) {
+			if ( !(ext %in% ZIPEXT)) {
 				ErrMsg <- paste0("ERROR: The ZIP file must have an appropriate extension (",
-					paste(zipext, collapse=","),").")
+					paste(ZIPEXT, collapse=","),").")
 				break
 			}
 			# Unzip RawZip
