@@ -58,9 +58,11 @@ or for _Linux_ users, run the _runApp.sh_ file.
 
 <br>
 
-## Docker
+## Usage with Docker
 
-A Dockerfile is provided for Linux and macOS operating systems, provided that Docker is installed. To perform the build, run the following command - it can take about a quarter of an hour :
+### Dockerfile
+
+A _Dockerfile_ is provided for Linux and macOS operating systems, provided that _Docker_ is installed. To perform the build, run the following command - it can take about a quarter of an hour :
 
            docker build -t rnmrquant1d .
 
@@ -69,6 +71,15 @@ To run the image as a container, execute the following command:
            docker run -d -p 80:3838 -v /tmp:/tmp --name rq1d rnmrquant1d
 
 Then, in your web navigator, the application is accessible to the URL : http://127.0.0.1
+
+### Docker Hub
+
+It is also possible to pull the _Docker_ image directly from _Docker Hub_ and then create an instance using the following commands:
+
+           docker pull nmrprocflow/rnmrquant1d:latest
+           docker run -d -p 80:3838 -v /tmp:/tmp --name rq1d nmrprocflow/rnmrquant1d
+
+Obviously, in this latter case, you do not need to upload the source code,  nor do you even need to have R installed. :-)
 
 <br>
 
