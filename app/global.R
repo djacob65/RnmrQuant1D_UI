@@ -48,7 +48,10 @@ CPRGHT <- conf$CPRGHT
 VERSION <- conf$VERSION
 
 # DEV mode
-DEV <- conf$DEV
+DEV <- ifelse(!is.null(conf$DEV), conf$DEV, 0)
+
+# Host IP
+HOSTIP <- ifelse(!is.null(conf$HOSTIP), conf$HOSTIP, '')
 
 # Max size for the ZIP file
 MAXZIPSIZE <- 100

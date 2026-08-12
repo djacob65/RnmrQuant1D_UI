@@ -28,11 +28,13 @@ ui <- fluidPage(
 
 	# App title
 	withTags(
-		table(tr(td(width = "15",""), td(img(src="images/favicon.ico", height = 40, width = 50)),
-			td(width = "10px",""), td(titlePanel(HTML(TITLE))),
-			td(style="width: 30px;",""),
-			td(class="title", htmlOutput("title"))
-		))
+		table(
+			tr(td(width = "15",""), td(img(src="images/favicon.ico", height = 40, width = 50)),
+				td(width = "10px",""), td(titlePanel(HTML(TITLE))),
+				td(style="width: 30px;",""),
+				td(class="title", htmlOutput("title"))
+			)
+		)
 	),
 
 	# Main Content

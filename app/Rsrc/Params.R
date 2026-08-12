@@ -27,6 +27,7 @@ gparamsModal <- function()
 	others <- NULL
 	for (i in 1:length(p))
 		others <- c( others, paste0(V$otherPkgs[[p[i]]]$Package,'_',V$otherPkgs[[p[i]]]$Version) )
+	hostip <- ifelse( nchar(HOSTIP)>0, paste("Host :",HOSTIP), '' )
 
 	modalDialog(
 		mainPanel(width=12, tabsetPanel(id = "paramtabs", type="pills",
@@ -103,9 +104,12 @@ gparamsModal <- function()
 					tags$tr(tags$td(colspan = 2, tags$br())),
 					tags$tr(tags$td(style="vertical-align: top;", "Loarded Packages:"), tags$td( paste(packages, collapse=', ') )),
 					tags$tr(tags$td(colspan = 2, tags$br())),
-					tags$tr(tags$td(style="vertical-align: top;", "Others Packages:"), tags$td( paste(others, collapse=', ') ))
+					tags$tr(tags$td(style="vertical-align: top;", "Others Packages:"), tags$td( paste(others, collapse=', ') )),
+					tags$tr(tags$td(colspan = 2, tags$hr())),
+					tags$tr(tags$td(colspan = 2, hostip))
 				)
 			))
+
 		)),
 		footer = modalButton("Close"), 
 		size="l", easyClose = TRUE

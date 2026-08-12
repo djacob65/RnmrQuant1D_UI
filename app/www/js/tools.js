@@ -1,11 +1,14 @@
 var out_confirm=false
 
-window.onbeforeunload = function(){ 
+window.onbeforeunload = function()
+{
 	if(out_confirm)
 		return true;
 }
 
-Shiny.addCustomMessageHandler("proc_status",function(value){
+
+Shiny.addCustomMessageHandler("proc_status",function(value)
+{
 	out_confirm = value;
 });
 
@@ -16,14 +19,16 @@ Shiny.addCustomMessageHandler("copyToClipboard", function(id){
 	navigator.clipboard.writeText(txt.value);
 });
 
-document.addEventListener("keydown", function (e) {
-  const keyset = ["m", "q", "i"];
-  if (e.ctrlKey && keyset.includes(e.key.toLowerCase())) {
-    e.preventDefault();
-    Shiny.onInputChange("keyEvent", "Ctrl-"+e.key.toUpperCase());
-    //console.log("Ctrl-"+e.key.toUpperCase()+" detected");
-  }
+
+document.addEventListener("keydown", function (e)
+{
+	const keyset = ["m", "q", "i"];
+	if (e.ctrlKey && keyset.includes(e.key.toLowerCase())) {
+		e.preventDefault();
+		Shiny.onInputChange("keyEvent", "Ctrl-"+e.key.toUpperCase());
+	}
 }, true);
+
 
 function toggleOptionsPanel() {
 	var panel = document.getElementById("options_panel");
