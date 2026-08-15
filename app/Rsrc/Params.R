@@ -53,8 +53,9 @@ gparamsModal <- function()
 					tags$tr(tags$td(textInput("QStype", "QS type name", QStype))),
 					tags$tr(tags$td(tags$br())),
 					tags$tr(tags$td(
-						bsButton("okgparams", label = "Submit", style="info", icon = icon("gear"))
-					))
+						bsButton("okgparams", label = "Save", style="info", icon = icon("gear"))
+					)),
+					tags$tr(tags$td(tags$hr()))
 				)
 			)),
 	
@@ -80,7 +81,8 @@ gparamsModal <- function()
 						h4("Color selector"),
 						uiOutput("picker_ui")
 					)
-				)
+				),
+				tags$tr(tags$td(tags$hr()))
 			)),
 
 			#----------------------------------------------------

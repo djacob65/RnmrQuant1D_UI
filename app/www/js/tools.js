@@ -23,7 +23,7 @@ Shiny.addCustomMessageHandler("copyToClipboard", function(id){
 document.addEventListener("keydown", function (e)
 {
 	const keyset = ["m", "q", "i"];
-	if (e.ctrlKey && keyset.includes(e.key.toLowerCase())) {
+	if ((e.ctrlKey||e.metaKey) && keyset.includes(e.key.toLowerCase())) {
 		e.preventDefault();
 		Shiny.onInputChange("keyEvent", "Ctrl-"+e.key.toUpperCase());
 	}
