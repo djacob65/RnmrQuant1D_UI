@@ -37,7 +37,7 @@ observe({
 		if (!rv$process_job$is_alive()) {
 			rv$endproc <- TRUE
 			if (rv$n_logs == nrow(rq1d$SAMPLES)) {
-				res <<- readRDS(file = file.path(gv$outDir,'rq1d.rds'))
+				res <- readRDS(file = file.path(gv$outDir,'rq1d.rds'))
 				rq1d <<- res$rq1d
 				if (!input$onlyintg) rq1d$get_spectra_data()
 			} else {

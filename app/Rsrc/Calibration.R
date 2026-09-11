@@ -131,7 +131,6 @@ observeEvent(input$calibButton, {
 calibResults <- eventReactive(input$calibButton, {
 	calibObj()
 	if (input$calibButton && ! is.null(gv$STDS_FILE)) {
-		session$sendCustomMessage("proc_status", TRUE)
 		shinyjs::disable("samplesReset")
 		for (widget in calib_widgets)
 			shinyjs::disable(widget)
@@ -175,6 +174,7 @@ calibResults <- eventReactive(input$calibButton, {
 		rq1d$procParams$OPTPHC1 <<- OPTPHC1;
 		rq1d$PROFILE <<- quantProfile
 
+		session$sendCustomMessage("proc_status", TRUE)
 		updateButton(session, "calibButton", label = "Launch Calibration", style = "info", disabled = TRUE)
 		shinyjs::enable("logButton")
 		shinyjs::enable("samplesReset")

@@ -1,3 +1,35 @@
+// Check if UI Ready
+var appReady = false;
+var received = new Set();
+var expected = ['FormatSelected', 'ZipUploaded', 'allUploaded'];
+
+function checkReady()
+{
+	if (!appReady && expected.every(function(n) { return received.has(n); })) {
+		appReady = true;
+		$('#loading-overlay').fadeOut(400);
+	}
+}
+
+$(document).on('shiny:value', function(event)
+{
+	console.log('shiny:value ->', event.name);
+	if (expected.includes(event.name)) {
+		received.add(event.name);
+		checkReady();
+	}
+});
+
+setTimeout(function()
+{
+	if (!appReady) {
+		appReady = true;
+		$('#loading-overlay').fadeOut(400);
+	}
+}, 10000);
+
+// --------------------
+
 var out_confirm=false
 
 window.onbeforeunload = function()
@@ -6,13 +38,15 @@ window.onbeforeunload = function()
 		return true;
 }
 
-
 Shiny.addCustomMessageHandler("proc_status",function(value)
 {
 	out_confirm = value;
 });
 
-Shiny.addCustomMessageHandler("copyToClipboard", function(id){
+// --------------------
+
+Shiny.addCustomMessageHandler("copyToClipboard", function(id)
+{
 	var txt = document.getElementById(id);
 	txt.select();
 	txt.setSelectionRange(0,99999);
@@ -30,7 +64,8 @@ document.addEventListener("keydown", function (e)
 }, true);
 
 
-function toggleOptionsPanel() {
+function toggleOptionsPanel()
+{
 	var panel = document.getElementById("options_panel");
 	var icon = document.getElementById("toggle_icon");
 	if (panel.style.display === "none" || panel.style.display === "") {

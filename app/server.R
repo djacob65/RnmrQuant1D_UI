@@ -12,7 +12,8 @@
 # Define server logic to summarize and view selected dataset ----
 server <- function(input, output, session)
 {
-	set.seed(123)
+	#set.seed(123)
+	session$allowReconnect("force")
 
 	# Gobal variables
 	gv <- list(
@@ -41,7 +42,7 @@ server <- function(input, output, session)
 		endproc = FALSE,            # End of processing
 		reset = FALSE,              # Reset all
 		intgreset = FALSE,          # Reset Integration
-		calibreset = FALSE,         # Reset Calibration & Quantification
+		calibreset = FALSE,         # Reset Calibration
 		quantreset = FALSE,         # Reset Quantification
 		process_job = NULL,         # processx object
 		running = FALSE,            # Job state
@@ -54,7 +55,6 @@ server <- function(input, output, session)
 
 	# RnmrQuant1D instance
 	rq1d <- NULL
-	res <- NULL
 
 	# Timestamping to measure the task execution time.
 	start.time <- 0
@@ -89,12 +89,13 @@ server <- function(input, output, session)
 
 	session$onSessionEnded(function() {
 		if (!isolate(rv$reset)) {
-			stopApp()
+			unlink(gv$outDir, recursive = TRUE)
+			unlink(tempdir(), recursive = TRUE)
+			if (!isShinyServer()) stopApp()
 		} else {
 			empty_directory(gv$outDir)
 		}
 	})
-
 
 	# --------------------------
 	# Handle application closure
@@ -110,29 +111,20 @@ server <- function(input, output, session)
 	observe({
 		cdata <- session$clientData
 		lparams <- unlist(strsplit(gsub("\\?", "", cdata[['url_search']]),  '&'))
-		if (length(lparams)>0) {
+		if (length(lparams)>0)
 			gv$sessid <<- lparams[1]
-		}
-		if (nchar(gv$sessid)==0) {
-			gv$sessid <<- paste0('_',paste(sample(c(0:9, letters[1:6]),30, replace=TRUE),collapse=""))
-		}
-		#shinyjs::runjs( paste0("window.history.replaceState(null,'RnmrQuant1D', '?", gv$sessid, "');") )
-	})
 
-	# --------------------------
-	# Manage Tabs
-	# --------------------------
-	observe({
-		c( input$onlyintg )
-		hideTab(inputId = "outtabs", target = "intg")
-		hideTab(inputId = "outtabs", target = "calib")
-		hideTab(inputId = "outtabs", target = "quant")
-		hideTab(inputId = "outtabs", target = "viewer")
-		if (input$onlyintg) {
-			showTab(inputId = "outtabs", target = "intg")
-		} else {
-			showTab(inputId = "outtabs", target = "calib")
-		}
+		if (nchar(gv$sessid)==0)
+			gv$sessid <<- paste0('_',paste(sample(c(0:9, letters[1:6]),30, replace=TRUE),collapse=""))
+
+		gv$outDir <<- file.path(dirname(tempdir()), gv$sessid)
+
+		if (dir.exists(gv$outDir))
+			empty_directory(gv$outDir)
+		else
+			dir.create(gv$outDir, showWarnings = FALSE)
+
+		shinyjs::runjs( paste0("window.history.replaceState(null,'RnmrQuant1D', '?", gv$sessid, "');") )
 	})
 
 }

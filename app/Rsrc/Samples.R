@@ -112,6 +112,9 @@ sampleTable <- reactive({
 		lstfiles <- list.files( path = file.path(gv$outDir, 'profiles'), pattern = "^standards-", full.names = FALSE)
 		updateSelectInput(session, "calibprofile", label = "Calibration profile", choices = lstfiles)
 	}
+
+	session$sendCustomMessage("proc_status", TRUE)
+
 	gv$samples
 })
 

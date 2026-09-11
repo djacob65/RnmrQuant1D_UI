@@ -65,7 +65,7 @@ RUN  cp /srv/shiny-server/conf/shiny-server.conf /etc/shiny-server/shiny-server.
   && chmod 755 /usr/local/bin/launch-server.sh \
   && rm -f /srv/shiny-server/index.html /srv/shiny-server/sample-apps
 
-WORKDIR /home
+WORKDIR /srv/shiny-server
 
 EXPOSE 3838
 

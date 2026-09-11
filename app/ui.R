@@ -37,6 +37,9 @@ ui <- fluidPage(
 		)
 	),
 
+	# The overlay, displayed as soon as the HTML loads, even before the Shiny connection is established
+	tags$div(id = "loading-overlay", tags$div(class = "spinner"), tags$p("Loading application...")),
+
 	# Main Content
 	tags$div(class="glob",
 

@@ -43,7 +43,7 @@ output$ZipUploaded <- reactive({
 		shinyjs::runjs( paste0("document.title ='",gsub("\\..*$", "", gv$NameZip),"';") )
 		output$title <- renderUI({ tags$h4(gsub("\\..*$", "", gv$NameZip)) })
 
-		gv$outDir <<- tempdir()
+		#gv$outDir <<- tempdir()
 		ext <- tolower(gsub("^.*\\.", "", gv$NameZip))
 		gv$RawZip <<- file.path(gv$outDir,paste0('raw.',ext))
 		file.rename( zipfile$datapath, gv$RawZip )
@@ -265,3 +265,19 @@ output$exportTMPL <- downloadHandler(
 		shinyjs::runjs( "document.getElementById('waitbox1').style.display = 'none';" )
 	}
 )
+
+## --------------------------
+## Manage Tabs
+## --------------------------
+observe({
+	c( input$onlyintg )
+	hideTab(inputId = "outtabs", target = "intg")
+	hideTab(inputId = "outtabs", target = "calib")
+	hideTab(inputId = "outtabs", target = "quant")
+	hideTab(inputId = "outtabs", target = "viewer")
+	if (input$onlyintg) {
+		showTab(inputId = "outtabs", target = "intg")
+	} else {
+		showTab(inputId = "outtabs", target = "calib")
+	}
+})

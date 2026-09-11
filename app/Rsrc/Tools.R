@@ -9,6 +9,24 @@ options(show.error.locations = TRUE)
 
 
 #----
+# is running with Shiny Server ?
+#----
+isShinyServer <- function()
+{
+	nzchar(
+		Sys.getenv("SHINY_SERVER_VERSION")
+	)
+}
+
+logSession <- function(txt, logfile="/tmp/rq1d.log")
+{
+	cat(
+		sprintf( "[%s] %s\n", format(Sys.time(),"%Y-%m-%d %H:%M:%OS3"), txt ),
+		file = logfile, append = TRUE
+	)
+}
+
+#----
 # Parse the section 'section' within the 'INI.file' file
 # Get the INI.list as an initial list to add or replace the couple of values (key=value)
 #----
