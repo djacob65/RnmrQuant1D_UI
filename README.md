@@ -74,12 +74,10 @@ Then, in your web navigator, the application is accessible to the URL : http://1
 
 ### Docker Hub
 
-It is also possible to pull the _Docker_ image directly from _Docker Hub_ and then create an instance using the following commands:
+It is also possible to pull the Docker image directly from Docker Hub, bypassing the source code, to create an instance using the following commands:
 
            docker pull nmrprocflow/rnmrquant1d:latest
            docker run -d -p 80:3838 -v /tmp:/tmp --name rq1d nmrprocflow/rnmrquant1d
-
-Obviously, in this latter case, you do not need to upload the source code,  nor do you even need to have R installed. :-)
 
 <br>
 
