@@ -4,6 +4,17 @@
 # (C) 2026 - D. JACOB - INRAE
 #------------------------------------------------
 
+##---------------
+# Export the current profile, including any potential modifications
+##---------------
+output$bQprofile <- downloadHandler(
+    filename = function() { 
+		paste0(gsub("\\..*$", "",gv$PROFILE),'.tsv')
+	},
+    content = function(file) {
+		rq1d$saveProfile(file)
+	}
+)
 
 ##---------------
 #  Show / hide "Spectra Viewer" depending on processing status

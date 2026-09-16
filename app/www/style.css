@@ -13,6 +13,13 @@
 	border-radius: 0px;
 }
 
+@media (min-width: 992px) {
+    .modal-lg, .modal-xl {
+        max-width: 1050px;
+        width: 1050px;
+    }
+}
+
 body::-webkit-scrollbar { display: none; }
 
 html, body {
@@ -140,6 +147,17 @@ body {
 	font-size: 14px;
 	line-height: 1.42857143;
 	color: #555;
+}
+
+.selectize-input.disabled {
+    opacity: 0.7;
+}
+
+.selectize-control.multi .selectize-input.disabled > div, .selectize-control.multi .selectize-input.disabled > div.active
+{
+	color: #000;
+	background: #fff;
+	border: 0px solid #fff;
 }
 
 .helpIcon {

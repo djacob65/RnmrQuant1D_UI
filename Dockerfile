@@ -22,7 +22,7 @@ RUN  apt-get update && apt-get install -y \
   && echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
   && locale-gen en_US.utf8 \
   && /usr/sbin/update-locale LANG=en_US.UTF-8 \
-  && apt-get -y clean && apt-get -y autoremove && rm -rf /var/lib/{cache,log}/ /var/cache/oracle-jdk8-installer /tmp/* /var/tmp/*
+  && apt-get -y clean && apt-get -y autoremove && rm -rf /var/lib/{cache,log}/ /tmp/* /var/tmp/*
 
 # Create / Configure a Timezone
 ENV  LC_ALL=en_US.UTF-8 \
@@ -43,7 +43,7 @@ RUN  apt-get update && apt-get install -y \
        r-cran-htmltools r-cran-htmlwidgets r-cran-markdown r-cran-devtools \
        r-cran-dt r-cran-plotly r-cran-magrittr r-cran-ggplot2 r-cran-igraph \
        r-cran-biocmanager r-bioc-impute r-bioc-massspecwavelet \ 
-       r-cran-shiny r-cran-shinybs  r-cran-shinyjs r-cran-shinywidgets \
+       r-cran-shiny r-cran-shinybs r-cran-shinyjs r-cran-shinywidgets r-cran-bslib \
        r-cran-shinycssloaders r-cran-colourpicker r-cran-openxlsx \
   && R -e "remotes::install_version('shiny', version = '1.14.0', force=TRUE)" \
   && R -e "remotes::install_version('shinyWidgets', version = '0.9.0', force=TRUE, upgrade='never')" \
@@ -57,13 +57,13 @@ RUN  R -e "remotes::install_github('inra/Rnmr1D', upgrade='never')" \
   && apt-get -y clean && apt-get -y autoremove && rm -rf /var/lib/{cache,log}/ /tmp/* /var/tmp/*
 
 # Add RnmrQuant1D_UI application
-ADD ./app /srv/shiny-server
+RUN rm -f /srv/shiny-server/*
+COPY /app /srv/shiny-server/
 
 # Copy the shiny-server configuration file and its startup script.
 RUN  cp /srv/shiny-server/conf/shiny-server.conf /etc/shiny-server/shiny-server.conf \
   && cp /srv/shiny-server/conf/launch-server.sh /usr/local/bin \
-  && chmod 755 /usr/local/bin/launch-server.sh \
-  && rm -f /srv/shiny-server/index.html /srv/shiny-server/sample-apps
+  && chmod 755 /usr/local/bin/launch-server.sh
 
 WORKDIR /srv/shiny-server
 

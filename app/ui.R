@@ -10,18 +10,29 @@ HEAD_JS <- ifelse( !DEV,
 	''
 )
 
+passwdInput <- function(inputId, label) {
+	tagList(
+		tags$label(label),
+		tags$input(id = inputId, type="password", value="", class="form-control")
+	)
+}
+
 #---------------------
 # User Interface
 #---------------------
 
 # Define UI for dataset viewer app ----
 ui <- fluidPage(
+	theme = bslib::bs_theme(version = 3),
+
 	# Custom CSS Styles
 	tags$head(
 		tags$link(rel="icon", href="images/favicon.ico"),
 		tags$link(rel="stylesheet", type="text/css",href="style.css"),
 		tags$script(HTML(HEAD_JS)),
-		tags$script(type="text/javascript", src = "js/tools.js")
+        tags$script(type="text/javascript", src = "js/md5.js"),                 # MD5 encoding
+		tags$script(type="text/javascript", src = "js/passwdInputBinding.js"),  # password Input widget
+		tags$script(type="text/javascript", src = "js/tools.js")                # general routines
 	),
 
 	shinyjs::useShinyjs(debug = TRUE, html = FALSE),
@@ -43,6 +54,40 @@ ui <- fluidPage(
 	# Main Content
 	tags$div(class="glob",
 
+	conditionalPanel(condition="output.SessInit==0",
+		# Login page as Front page
+		fluidRow(
+			tags$br(),
+			withTags(table(align="center",
+				tr(td(colspan=4,br(), br(), hr(), br())),
+				tr(td(style="width: 1px;",""),
+					td(style="width: 600px;",
+						a(img(src="images/logo.png"),href=conf$URL_WEBSITE, target="_blank"), br(),
+						p( h2("Interactive tool dedicated to quantification ", br(),
+						"from 1D NMR spectra, including peak fitting", br(),
+						"and calibration using standard spectra."))
+					),
+					td(style="width: 50px;",""),
+					td(valign="top", style="width: 400px;", div(class = "login",
+						## Login module;
+						wellPanel(
+							textInput("userName", "Email:"),
+							passwdInput("passwd", "Password:"),
+							br(),
+							actionButton("Login", "Log in")
+						),
+						div(class="passerr", textOutput("pass"))
+					))
+				),
+				tr(td( colspan=3, br() ), td( bsAlert("ErrorAlert") ) ),
+				tr(td( colspan=4, br(), hr() )),
+				tr(td(colspan=4, align="center", a(img(src="images/INRAE_logo.png", height = 20), href="http://www.inrae.fr/en/", target="_blank") ))
+			))
+		)
+	),
+
+	conditionalPanel(condition="output.SessInit==1",
+
 	# Step 1 - File selection
 		conditionalPanel(condition="output.fileUploaded==0",
 			mainPanel(width=12, tabsetPanel(id = "intabs",
@@ -50,7 +95,7 @@ ui <- fluidPage(
 		# Upload
 		#-----------------------------------------------
 				tabPanel('Upload', tags$div(class="tabs",
-					column(3,
+					fluidRow(column(3,
 						tags$br(),tags$br(),
 						selectInput("vendor", "Instrument/Vendor/Format:",  selectVendor, selected = "sinput"),
 						tags$br(),
@@ -89,7 +134,7 @@ ui <- fluidPage(
 							href = "images/workflow.png", target = "_blank",
 							img(src="images/workflow.png", width = 650)
 						)
-					),
+					)),
 					column(12, bsAlert("AlertUpLoad"))
 				)),
 		#-----------------------------------------------
@@ -122,7 +167,7 @@ ui <- fluidPage(
 		#-----------------------------------------------
 				tabPanel('Integration', value = "intg", tags$div(class="tabs",
 					tags$br(), tags$br(),
-					column(4,
+					fluidRow(column(4,
 						fluidRow( column(9,
 							selectInput("sequence", "Sequence (PULSE)", choices = NULL, width = "100%"),
 							tags$br()
@@ -154,7 +199,7 @@ ui <- fluidPage(
 								choices = c(), selected = NULL, multiple = TRUE),
 							bsButton("intgInvBtn", label = "Invert selection", style="info", disabled = FALSE)
 						)
-					),
+					)),
 					column(12, tags$br(), tags$br()),
 					column(12,
 						div( style="max-height: 300px; overflow: scroll;",
@@ -208,7 +253,7 @@ ui <- fluidPage(
 				tabPanel('Calibration', value = "calib", tags$div(class="tabs",
 					tags$br(), tags$br(),
 					conditionalPanel(condition="output.fileQCQS==1", column(12,
-						column(3,
+						fluidRow(column(3,
 							selectInput(inputId = "sequence2", label = "Sequence (PULSE)", choices = NULL, width = "100%"),
 							fluidRow(
 								column(6, checkboxInput("deconv", "Peak fitting", FALSE)),
@@ -240,7 +285,7 @@ ui <- fluidPage(
 								)
 							),
 							checkboxInput("externalCalib", "External profile", value = FALSE)
-						),
+						)),
 						column(12,
 							tags$br(),
 							bsButton("calibButton", label = "Launch Calibration", style="info", icon = icon("rocket")),
@@ -271,7 +316,7 @@ ui <- fluidPage(
 		#-----------------------------------------------
 				tabPanel('Quantification', value = "quant", tags$div(class="tabs",
 					tags$br(), tags$br(),
-					column(4,
+					fluidRow(column(4,
 						conditionalPanel(condition = "!input.externalQuant",
 							fluidRow(
 								column(9,
@@ -299,7 +344,7 @@ ui <- fluidPage(
 								choices = c(), selected = NULL, multiple = TRUE),
 							bsButton("quantInvBtn", label = "Invert selection", style="info", disabled = FALSE)
 						)
-					),
+					)),
 					column(12, tags$br(), tags$br()),
 					column(12,
 						div( style="max-height: 400px; overflow: scroll;",
@@ -351,11 +396,10 @@ ui <- fluidPage(
 		#-----------------------------------------------
 				tabPanel('Spectra viewer', value = "viewer", tags$div(class="tabs",
 					tags$br(),
-					column(12,
+					fluidRow(
 						column(1, style="width: 1%;", tags$br()),
 						column(10,
 							dataTableOutput("sampleInfos"),
-							tags$br(), tags$br()
 						),
 						column(1,
 							tags$br(), tags$br(),
@@ -385,7 +429,7 @@ ui <- fluidPage(
 									style = "margin-bottom: 5px;"
 							),
 							tags$div( id = "options_panel", style = "display: none;",
-								column(12,
+								fluidRow(
 									column(2,
 										radioButtons("tags", "Tags:", c("None" = "none", "Peak Id" = "peak", "Name" = "name"),
 											inline = FALSE)
@@ -412,7 +456,7 @@ ui <- fluidPage(
 									verbatimTextOutput("outInfos")
 								),
 								conditionalPanel(condition="input.showpeaklist==1",
-									column(12,
+									fluidRow(
 										column(6,
 											checkboxInput("cmpdpeaks", "Only the peaks of compounds", TRUE)
 										),
@@ -441,7 +485,7 @@ ui <- fluidPage(
 
 			))
 		))
-	),
+	)),
 
 	# Footer
 	tags$div(class="footer-app", HTML(paste0('<div><span style="font-size:11px;">Version ',VERSION,' - ',CPRGHT,' - </span>

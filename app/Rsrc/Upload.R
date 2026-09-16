@@ -31,7 +31,7 @@ outputOptions(output, 'FormatSelected', priority=20)
 ##---------------
 output$ZipUploaded <- reactive({
 	Sys.sleep(1)
-	if(is.null(input$zipfile)) return(0)
+	if(is.null(input$zipfile) || !rv$Logged) return(0)
 	if (! is.null(input$zipfile) && is.null(input$samplefile)) {
 		shinyjs::runjs( "document.getElementById('waitbox1').style.display = 'block';" )
 		ErrMsg <- ''
@@ -89,7 +89,7 @@ outputOptions(output, 'ZipUploaded', priority=20)
 ##---------------
 output$allUploaded <- reactive({
 	Sys.sleep(1)
-	ret <- is.null(input$zipfile) || is.null(input$samplefile)
+	ret <- is.null(input$zipfile) || is.null(input$samplefile) || !rv$Logged
 	return( ifelse( ret, 0, 1 ) )
 })
 outputOptions(output, 'allUploaded', suspendWhenHidden=FALSE)

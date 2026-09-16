@@ -128,3 +128,9 @@ OUTLOG <- 'rq1d.out'
 
 # Message file serving also as a semaphore
 ENDFILE <- 'ended.out'
+
+# User connexion management
+USER_ACCOUNT_FILE <- '/run/userlist'
+USER_LOGGED <- ifelse(file.exists(USER_ACCOUNT_FILE), FALSE, TRUE)
+USER <- list( email='anonymous', lastname='', firstname='', password='' )
+USERS <- NULL

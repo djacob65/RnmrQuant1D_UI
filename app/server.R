@@ -36,6 +36,7 @@ server <- function(input, output, session)
 
 	# Reactive values
 	rv <- reactiveValues(
+		Logged = USER_LOGGED,       # Is User logged ? 
 		load = 0,                   # Files are loaded
 		okws = 0,                   # Workspace is OK
 		samples = 0,                # Samples Table is OK
@@ -62,9 +63,10 @@ server <- function(input, output, session)
 	# List of widgets by category – useful for enabling or disabling them during reset or running
 	intg_widgets <- c('sequence','externalIntg','intgprofile','externIntgFile','listcmpds','intgInvBtn','intgpattern','listsamples')
 	calib_widgets <- c('sequence2', 'deconv', 'optphc1', 'thresfP', 'qbl', 'externalCalib', 'calibprofile', 'externCalibFile')
-	quant_widgets <- c('externalQuant','quantprofile','externQuantFile','quantInvBtn','quantgpattern','listsamples2','listcmpds2')
+	quant_widgets <- c('externalQuant','quantprofile','externQuantFile','quantInvBtn','quantpattern','listsamples2','listcmpds2')
 
 	# Load source code
+	source("Rsrc/Login.R", local=TRUE)            # Log in module
 	source("Rsrc/Upload.R", local=TRUE)           # Upload files
 	source("Rsrc/Samples.R", local=TRUE)          # Samples tab
 	source("Rsrc/Calibration.R", local=TRUE)      # Calibration tab
@@ -124,7 +126,18 @@ server <- function(input, output, session)
 		else
 			dir.create(gv$outDir, showWarnings = FALSE)
 
-		shinyjs::runjs( paste0("window.history.replaceState(null,'RnmrQuant1D', '?", gv$sessid, "');") )
+		#shinyjs::runjs( paste0("window.history.replaceState(null,'', '?", gv$sessid, "');") )
 	})
+
+
+	##---------------
+	## SessInit: Is User logged ? 
+	##---------------
+	output$SessInit <- reactive({
+		sessinit <- rv$Logged == TRUE
+		return(sessinit)
+	})
+	outputOptions(output, 'SessInit', suspendWhenHidden=FALSE)
+	outputOptions(output, 'SessInit', priority=1)
 
 }

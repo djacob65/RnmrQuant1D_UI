@@ -162,7 +162,6 @@ observeEvent(input$viewIntgBtn, {
 		output$intgTable2 <- renderDT({
 			if (!is.null(rq1d$PROFILE)) {
 				quantif <- rq1d$PROFILE$quantif
-				quantif$P4 <- NULL
 				datatable(quantif, 
 					options = list(pageLength = 10),
 					editable = list(target = "cell", disable = list(columns = c(1,9))))
@@ -175,9 +174,7 @@ observeEvent(input$viewIntgBtn, {
 		observeEvent(input$intgTable2_cell_edit, {
 			info <- input$intgTable2_cell_edit
 			quantif <- rq1d$PROFILE$quantif
-			quantif$P4 <- NULL
 			quantif[info$row, info$col] <- info$value
-			quantif$P4 <- rq1d$PROFILE$quantif$P4
 			rq1d$PROFILE$quantif <<- quantif
 		})
 		showModal(modalDialog(
@@ -186,6 +183,7 @@ observeEvent(input$viewIntgBtn, {
 			DTOutput("intgTable1"),
 			tags$br(),tags$br(),
 			DTOutput("intgTable2"),
+			downloadButton("bQprofile", "Download"),
 			tags$br(),tags$br(),
 			HTML("See "), 
 			tags$a("Quantification profile", target = "_blank",	href = urls_doc$QUANTDOC),
