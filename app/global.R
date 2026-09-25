@@ -117,6 +117,9 @@ urls_doc <- list(
 	QUANTDOC = conf$QUANTDOC
 )
 
+# Bootstrap version (3, 4 or 5)
+BSVERSION <- ifelse(!is.null(conf$BSVERSION), as.numeric(conf$BSVERSION), 3)
+
 # Spectra colors : original, model, residus
 COLSPEC <- c('gray70','#86c1db','deeppink4')
 

@@ -42,6 +42,7 @@ calibprofile <- reactive ({
 	return(ret)
 })
 
+
 ##---------------
 # Get QCname & QSname
 ##---------------
@@ -101,8 +102,8 @@ observeEvent(input$calibReset, {
 
 observeEvent(input$confirm_calib, {
 	removeModal()
-	rv$calibreset <- TRUE
-	rv$quantreset <- TRUE
+	rv$calibreset <- rv$quantreset <-TRUE
+	rv$endcalib <- rv$endproc <- FALSE
 	shinyjs::disable("logButton")
 	shinyjs::disable("calibReset")
 	shinyjs::enable("calibButton")
@@ -110,6 +111,9 @@ observeEvent(input$confirm_calib, {
 	hideTab(inputId = "outtabs", target = "viewer")
 	for (widget in calib_widgets)
 		shinyjs::enable(widget)
+	LogFile <- file.path(rq1d$TMPDIR,'stds_QC-QS.txt')
+	if (file.exists(LogFile)) unlink(LogFile)
+
 })
 
 observeEvent(input$cancel_calib, {
@@ -126,77 +130,12 @@ observeEvent(input$calibButton, {
 
 
 ##---------------
-# Compute PULCON factor for QC & QS
-##---------------
-calibResults <- eventReactive(input$calibButton, {
-	calibObj()
-	if (input$calibButton && ! is.null(gv$STDS_FILE)) {
-		shinyjs::disable("samplesReset")
-		for (widget in calib_widgets)
-			shinyjs::disable(widget)
-		updateButton(session, "calibButton", label = "Launch Calibration", style = "warning", disabled = TRUE)
-
-		OPTPHC0 <- rq1d$procParams$OPTPHC0
-		OPTPHC1 <- rq1d$procParams$OPTPHC1
-		rq1d$procParams$OPTPHC0 <<- !input$optphc1;
-		rq1d$procParams$OPTPHC1 <<- input$optphc1;
-		quantProfile <- rq1d$PROFILE
-
-		repeat {
-			t <- system.time({
-				QSlist <- unique(gv$samples[ gv$samples$Type == QCQS[2] & gv$samples$Pulse==rq1d$SEQUENCE, 1])
-				QS <- get_response_factors(rq1d, rq1d$QStype, QSlist, thresfP=input$thresfP, deconv=input$deconv, qbl=input$qbl, append=FALSE, verbose=1)
-				if (is.null(QS)) break
-
-				QClist <- unique(gv$samples[ gv$samples$Type == QCQS[1] & gv$samples$Pulse==rq1d$SEQUENCE, 1])
-				QC <- get_response_factors(rq1d, rq1d$QCtype, QClist, thresfP=input$thresfP, deconv=input$deconv, qbl=input$qbl, append=TRUE, verbose=1)
-				if (is.null(QC)) break	
-			})
-	
-			shinyjs::runjs(paste0("document.getElementById('calibmsg').textContent = 'Waiting : Response factor for QC estimation ...';"))
-			QS_df  <- calib.exe.catch({ rq1d$get_factor_table(QS) })
-			QC_df  <- calib.exe.catch({ rq1d$get_factor_table(QC) })
-			QC_tab <- calib.exe.catch({ rq1d$get_QC_estimation(QC, QS) })
-			if (sum(is.na(QC_tab[,2]))==0)
-				Yest <- lm(data=as.data.frame(QC_tab), Estimated~Real)
-			else
-				Yest <- NULL
-	
-			rq1d$fP <<- list(QSname=QSlist, Mat=QS_df, values=QS$fP, CV=QS$fPUL$CV, mean=QS$fPUL$mean, fK=QS$fK, elapsed=round(as.numeric(t[3]),2))
-			shinyjs::runjs(paste0("document.getElementById('calibmsg').textContent = '';"))
-			shinyjs::enable("quantButton")
-			for (widget in quant_widgets)
-				shinyjs::enable(widget)
-			break
-		}
-
-		rq1d$procParams$OPTPHC0 <<- OPTPHC0;
-		rq1d$procParams$OPTPHC1 <<- OPTPHC1;
-		rq1d$PROFILE <<- quantProfile
-
-		session$sendCustomMessage("proc_status", TRUE)
-		updateButton(session, "calibButton", label = "Launch Calibration", style = "info", disabled = TRUE)
-		shinyjs::enable("logButton")
-		shinyjs::enable("samplesReset")
-		shinyjs::enable("calibReset")
-
-		if (!is.null(QC) && !is.null(QS))
-			list(QS=QS, QC=QC, QS_df=QS_df, QC_df=QC_df, QC_tab=QC_tab, Yest=Yest)
-		else
-			NULL
-	}
-})
-
-
-##---------------
 # Show Calibration profile in a Modal Dialog Box
 ##---------------
 observeEvent(input$viewCalibBtn, {
-	if (is.null(gv$STDS_FILE)) {
-		calibfile <- calibprofile()
-		if (!is.null(calibfile))
-			gv$STDS_FILE <<- file.path(gv$outDir, 'profiles', calibfile)
-	}
+	calibfile <- calibprofile()
+	if (!is.null(calibfile))
+		gv$STDS_FILE <<- file.path(gv$outDir, 'profiles', calibfile)
 	if (!is.null(gv$STDS_FILE)) {
 		output$calibTable <- renderDT({
 			STDS <- data.frame(read.table(gv$STDS_FILE, header=T, sep="\t", dec=".", stringsAsFactors=F))
@@ -206,6 +145,7 @@ observeEvent(input$viewCalibBtn, {
 			title = "Calibration profile",
 			tags$br(),
 			DTOutput("calibTable"),
+			downloadButton("bCprofile", "Download"),
 			tags$br(),tags$br(),
 			HTML("See "),
 			tags$a("Calibration profile", target = "_blank", href = urls_doc$CALIBDOC), 
@@ -220,13 +160,28 @@ observeEvent(input$viewCalibBtn, {
 
 
 ##---------------
+# Export the current calculation profile
+##---------------
+output$bCprofile <- downloadHandler(
+	filename = function() {
+		calibfile <- calibprofile()
+		if (!is.null(calibfile))
+			gv$STDS_FILE <<- file.path(gv$outDir, 'profiles', calibfile)
+		basename(gv$STDS_FILE)
+	},
+	content = function(file) {
+		M <- data.frame(read.table(gv$STDS_FILE, header=T, sep="\t", dec=".", stringsAsFactors=F))
+		write.table(M, file, sep = "\t", dec = ".", row.names = FALSE)
+	}
+)
+
+
+##---------------
 # Show Calibration logfile
 ##---------------
 observeEvent(input$logButton, {
 	calibObj()
-	#stds_file <- list.files(file.path(gv$outDir,'tmp/log'), pattern='stds_.+\\.txt')[1]
-	stds_file <- 'stds_QC-QS.txt'
-	LogFile <- file.path(rq1d$TMPDIR,stds_file)
+	LogFile <- file.path(rq1d$TMPDIR,'stds_QC-QS.txt')
 	if (file.exists(LogFile)) {
 		content <- readLines(LogFile, warn = FALSE)
 		showModal(modalDialog(
@@ -241,20 +196,65 @@ observeEvent(input$logButton, {
 
 
 ##---------------
-# Check Calibration 
+# Check Calibration &
+# Launch the calculation of the PULCON factor for "QS-QC" types 
 ##---------------
 output$outCalib <- renderPrint({
-	if (gv$hasQCQS) {
-		if (input$calibButton && ! rv$calibreset) {
-			closeAlert(session, "AlertCalibId")
-			obj <- calibObj()
-			if (!is.null(gv$STDS_FILE))
-				out <- calib.exe.catch({
-					rq1d$check_calibration(verbose=TRUE)
-				})
+	req(input$calibButton)
+	repeat {
+		if (input$calibButton!=lstbtn$calib || rv$calibreset)
+			break
+
+		lstbtn$calib <<- lstbtn$calib + 1
+
+		if (!gv$hasQCQS) {
+			dispAlert2("No QC/QS-labeled spectra in the sample file, So no calibration or quantification, only integration is possible.")
+			break
 		}
-	} else {
-		"No QC/QS-labeled spectra in the sample file, So no calibration or quantification, only integration is possible."
+
+		closeAlert(session, "AlertCalibId")
+
+		obj <- calibObj()
+		if (is.null(gv$STDS_FILE)) {
+			dispAlert2("Error: No calibration profile provided")
+			break
+		}
+
+		isolate({
+			QSlist <- unique(gv$samples[ gv$samples$Type == QCQS[2] & gv$samples$Pulse==rq1d$SEQUENCE, 1])
+			QClist <- unique(gv$samples[ gv$samples$Type == QCQS[1] & gv$samples$Pulse==rq1d$SEQUENCE, 1])
+			Rscript_txt <- paste0(
+				get_Rscript_for_calib('QSvar',rq1d$QStype, QSlist, thresfP=input$thresfP, deconv=input$deconv, qbl=input$qbl, append=FALSE, verbose=1),
+				get_Rscript_for_calib('QCvar',rq1d$QCtype, QClist, thresfP=input$thresfP, deconv=input$deconv, qbl=input$qbl, append=TRUE, verbose=1)
+			)
+			rq1d$procParams$OPTPHC0 <- !input$optphc1;
+			rq1d$procParams$OPTPHC1 <- input$optphc1;
+		})
+
+		out <- exe.catch({
+			rq1d$check_calibration(verbose=TRUE)
+		})
+
+		if (out$error_occurred) {
+			dispAlert2(out$message)
+			break
+		}
+
+		shinyjs::disable("samplesReset")
+		for (widget in calib_widgets)
+			shinyjs::disable(widget)
+		updateButton(session, "calibButton", label = " Launch Calibration", style = "warning", disabled = TRUE)
+
+		shinyjs::runjs(paste0("document.getElementById('pb_calib').style.display = 'block';document.getElementById('calibmsg').textContent = 'Launch the calculation of the PULCON factor ...';"))
+		session$sendCustomMessage("proc_status", TRUE)
+
+		rv$running <- TRUE
+		rv$endcalib <- FALSE
+		rv$calib_output <- NULL
+
+		gv$proctype <<- 'calib'
+		rv$process_job <- submit_rq1d_calib(rq1d, gv, Rscript_txt)
+		break
 	}
 })
 
@@ -263,25 +263,14 @@ output$outCalib <- renderPrint({
 # Show Calibration details 
 ##---------------
 output$outPulcon <- renderUI({
+	req(rv$endcalib)
 	ret <- FALSE
 	repeat {
-		if (!gv$hasQCQS || ! input$calibButton || rv$calibreset)
+		res <- rv$calib_output
+		if (is.null(res))
 			break
 
-		if (is.null(gv$STDS_FILE))
-			break
-
-		closeAlert(session, "AlertIntgId")
-
-		obj <- calibObj()
-		if (is.null(gv$STDS_FILE)) {
-			dispAlert2("Error: No calibration profile provided")
-			break
-		}
-
-		#  Compute PULCON factors for QC & QS
-		res <- calibResults()
-		if (is.null(res)) {
+		if (! "list" %in% class(res) || is.null(res$QC) || is.null(res$QS)) {
 			dispAlert2("Error: something went wrong")
 			break
 		}
@@ -294,6 +283,7 @@ output$outPulcon <- renderUI({
 			)
 			break
 		}
+
 		if ( nrow(gv$samples[ ! gv$samples$Type %in% QCQS, ])>0 )
 			showTab(inputId = "outtabs", target = "quant")
 		ret <- TRUE
@@ -324,9 +314,11 @@ output$outPulcon <- renderUI({
 # PLot QC estimation
 ##---------------
 output$QC_estimation <- renderPlotly({
+	req(rv$endcalib)
 	if (! gv$hasQCQS || ! input$calibButton || rv$calibreset) return(NULL)
-	res <- calibResults()
-	if (!is.null(res) && !is.null(gv$STDS_FILE))
+	if (gv$proctype !='calib' || is.null(rv$calib_output)) return(NULL)
+	res <- rv$calib_output
+	if (!is.null(res) && "list" %in% class(res) && !is.null(gv$STDS_FILE))
 		rq1d$plot_QC_estimation(res$QC_tab)
 })
 

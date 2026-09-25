@@ -109,7 +109,7 @@ observeEvent(input$confirm_quant, {
 	shinyjs::enable("quantButton")
 	for (widget in quant_widgets)
 		shinyjs::enable(widget)
-	rv$job_output <- ''
+	rv$proc_output <- NULL
 }, ignoreInit = TRUE)
 
 observeEvent(input$cancel_quant, {
@@ -236,8 +236,6 @@ output$selquant <- renderText({
 ##---------------
 output$outQuant <- renderPrint({
 	req(input$quantButton)
-	rv$endproc <- FALSE
-	
 	repeat {
 		if (input$quantButton!=lstbtn$quant || rv$quantreset)
 			break
@@ -268,14 +266,14 @@ output$outQuant <- renderPrint({
 
 		closeAlert(session, "AlertQuantId")
 
-		shinyjs::disable("samplesReset")
-		shinyjs::disable("calibReset")
-		for (widget in quant_widgets)
-			shinyjs::disable(widget)
-
-		out <- quant.exe.catch({
+		out <- exe.catch({
 			rq1d$check_profile(verbose=TRUE)
 		})
+
+		if (out$error_occurred) {
+			dispAlert4(out$message)
+			break
+		}
 
 		max_ncpu <- ifelse(gv$max_ncpu>0, gv$max_ncpu, parallel::detectCores())
 		gv$ncpu <<- min(length(gv$zones), max_ncpu)
@@ -285,17 +283,24 @@ output$outQuant <- renderPrint({
 		cat(paste('Nb Samples =', nrow(rq1d$SAMPLES)),"\n")
 		cat("\n")
 
-		updateButton(session, "quantButton", label = "Launch Quantification", style = "warning", disabled = TRUE)
+		shinyjs::disable("samplesReset")
+		shinyjs::disable("calibReset")
+		for (widget in quant_widgets)
+			shinyjs::disable(widget)
+		updateButton(session, "quantButton", label = " Launch Quantification", style = "warning", disabled = TRUE)
 
-		# Initialize the cluster then launch the processing
-		rv$running <- TRUE
-		rv$n_logs <- 0
-		rv$job_output <- NULL
 		start.time <<- Sys.time()
 		quant_pb(paste('Initialize the cluster (',gv$ncpu,' cores) ...'), 0)
 		session$sendCustomMessage("proc_status", TRUE)
-		rv$process_job <- submit_rq1d_proc(rq1d, gv, proc='quant')
 
+		rv$running <- TRUE
+		rv$endproc <- FALSE
+		rv$n_logs <- 0
+		rv$proc_output <- NULL
+
+		# Initialize the cluster then launch the processing
+		gv$proctype <<- 'quant'
+		rv$process_job <- submit_rq1d_proc(rq1d, gv)
 		break
 	}
 })
@@ -305,11 +310,10 @@ output$outQuant <- renderPrint({
 # Display the job output
 ##---------------
 output$outQuant2 <- renderPrint({
-	req(!rv$running)
-	if (length(nchar(rv$job_output))>1) {
-		rv$endproc <- TRUE
-		rv$running <- FALSE
-		for(l in rv$job_output) cat(l,"\n")
+	req(!rv$running, rv$proc_output)
+	out <- rv$proc_output
+	if (gv$proctype =='quant' && "character" %in% class(out) && length(nchar(out))>1) {
+		for(l in out) cat(l,"\n")
 	}
 })
 
@@ -319,26 +323,26 @@ output$outQuant2 <- renderPrint({
 ##---------------
 observeEvent(input$quantStop, {
 	req(rv$process_job)
-	if (rv$process_job$is_alive()) {
+	if (gv$proctype=='quant' && rv$process_job$is_alive()) {
 		rv$process_job$kill_tree()
 	}
 	dispAlert4(paste("Warning: Processing stopped by the user at",rv$n_logs,"/",nrow(rq1d$SAMPLES)))
 	shinyjs::enable("calibReset")
 	shinyjs::enable("samplesReset")
-	updateButton(session, "quantButton", label = "Launch Quantification", style = "info", disabled = TRUE)
-	rv$job_output <- NULL
+	updateButton(session, "quantButton", label = " Launch Quantification", style = "info", disabled = TRUE)
+	rv$proc_output <- NULL
 	if (file.exists(file.path(gv$outDir,OUTLOG)))
-		rv$job_output <- readLines(file.path(gv$outDir,OUTLOG))
+		rv$proc_output <- readLines(file.path(gv$outDir,OUTLOG))
 	if (file.exists(file.path(rq1d$TMPDIR,ENDFILE)))
-		rv$job_output <- c( rv$job_output , readLines(file.path(rq1d$TMPDIR,ENDFILE)))
+		rv$proc_output <- c( rv$proc_output , readLines(file.path(rq1d$TMPDIR,ENDFILE)))
 	rv$running <- FALSE
+	rv$endproc <- TRUE
 	shinyjs::enable("quantReset")
 	rq1d$SAMPLES <<- rq1d$SAMPLES[1:(rv$n_logs-1), ]
 	rq1d$quantpars <<- list(cmpdlist=gv$compounds, zones=gv$zones, ncpu=gv$ncpu, 
 			tottime=as.numeric(Sys.time()-start.time, units="secs"))
 	rq1d$res$proctype <<- 'quantification'
 	rq1d$get_spectra_data()
-	rv$endproc <- TRUE
 })
 
 

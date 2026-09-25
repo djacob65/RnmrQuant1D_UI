@@ -23,7 +23,7 @@ passwdInput <- function(inputId, label) {
 
 # Define UI for dataset viewer app ----
 ui <- fluidPage(
-	theme = bslib::bs_theme(version = 3),
+	theme = bslib::bs_theme(version = BSVERSION),
 
 	# Custom CSS Styles
 	tags$head(
@@ -293,8 +293,7 @@ ui <- fluidPage(
 							bsButton("calibReset", label = "Reset", style="info", disabled = TRUE)
 						),
 						column(12,
-							tags$br(),
-							tags$div(id="progressbar",
+							tags$div(id="pb_calib", tags$br(),
 								HTML('&nbsp;<span style="font-size:12pt;color:blueviolet;font-weight:bold;" id="calibmsg"></span>')
 							)
 						)
@@ -397,9 +396,8 @@ ui <- fluidPage(
 				tabPanel('Spectra viewer', value = "viewer", tags$div(class="tabs",
 					tags$br(),
 					fluidRow(
-						column(1, style="width: 1%;", tags$br()),
-						column(10,
-							dataTableOutput("sampleInfos"),
+						column(11,
+							DTOutput("sampleInfos"),
 						),
 						column(1,
 							tags$br(), tags$br(),
@@ -408,7 +406,6 @@ ui <- fluidPage(
 					),
 					tags$br(), tags$br(),
 					fluidRow(
-						column(1, style="width: 1%;", tags$br()),
 						column(2,
 							selectInput( inputId = "selsamples", label   = "Select a sample", width="100%",
 								choices = c(), selected = NULL, multiple = FALSE, selectize=FALSE, size=30),
@@ -418,7 +415,7 @@ ui <- fluidPage(
 								tags$div( id="waitbox4", class="waitbox", style="display: none;"),
 								tags$br(), tags$br(), tags$br(), tags$br()
 						),
-						column(6, style="width: 58%;",
+						column(7, style="width: 58%;",
 							tags$div(
 								tags$span( id = "toggle_icon", HTML("&#9658;"),
 									onclick = "toggleOptionsPanel()",

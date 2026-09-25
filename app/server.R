@@ -31,6 +31,7 @@ server <- function(input, output, session)
 		STDS_FILE =NULL,            # file name of the calibration profile
 		affinity = AFFINITY,        # CPU affinity
 		max_ncpu = CORES,           # Max number of cores for parallel computing
+		proctype = 'none',          # Type of the current processing : 'calib' or 'quant'
 		ncpu = 0                    # Number of cores used for parallel computing
 	)
 
@@ -40,14 +41,16 @@ server <- function(input, output, session)
 		load = 0,                   # Files are loaded
 		okws = 0,                   # Workspace is OK
 		samples = 0,                # Samples Table is OK
-		endproc = FALSE,            # End of processing
 		reset = FALSE,              # Reset all
 		intgreset = FALSE,          # Reset Integration
 		calibreset = FALSE,         # Reset Calibration
 		quantreset = FALSE,         # Reset Quantification
 		process_job = NULL,         # processx object
 		running = FALSE,            # Job state
-		job_output = NULL,          # Job output
+		calib_output = NULL,        # Calibration output
+		proc_output = NULL,         # Integration / Quantification output
+		endcalib = FALSE,           # End of calibration
+		endproc = FALSE,            # End of processing
 		n_logs = 0                  # Number of processed samples 
 	)
 
@@ -97,13 +100,6 @@ server <- function(input, output, session)
 		} else {
 			empty_directory(gv$outDir)
 		}
-	})
-
-	# --------------------------
-	# Handle application closure
-	# --------------------------
-	observeEvent(rv$endproc, {
-		session$sendCustomMessage("proc_status", rv$endproc)
 	})
 
 

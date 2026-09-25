@@ -301,7 +301,7 @@ get_response_factors <- function(rq1d, QStype, QSlist, thresfP, deconv, qbl, app
 		out <- exe.catch({
 			rq1d$get_response_factors(QStype, S, thresfP=thresfP, deconv=deconv, qbl=qbl, verbose=2)
 		})
-		print(out$message)
+		if (!is.null(out$message)) print(out$message)
 		cat("\n\n")
 		if (out$error_occurred) next
 		L <- out$result
@@ -330,7 +330,7 @@ get_response_factors <- function(rq1d, QStype, QSlist, thresfP, deconv, qbl, app
 #----
 # Run a rq1d task in an independent thread
 #----
-submit_rq1d_proc <- function(rq1d, gv, proc='intg', reset=TRUE)
+submit_rq1d_proc <- function(rq1d, gv, reset=TRUE)
 {
 	unlink(file.path(rq1d$TMPDIR,"log-*.txt"))
 	unlink(file.path(rq1d$TMPDIR,"output_*.txt"))
@@ -339,7 +339,7 @@ submit_rq1d_proc <- function(rq1d, gv, proc='intg', reset=TRUE)
 
 	zones <- paste(gv$zones, collapse=",")
 	cmpds <- paste(gv$compounds, collapse=",")
-	if (proc=='intg') {
+	if (gv$proctype=='intg') {
 		proc_label <- 'Integrals'
 		rq1d_cmd <- paste0("rq1d$proc_Integrals(c(",zones,"), ncpu=",gv$ncpu,", progress=FALSE, verbose=2)")
 	} else {
@@ -402,7 +402,103 @@ submit_rq1d_proc <- function(rq1d, gv, proc='intg', reset=TRUE)
 		cleanup_tree = TRUE,
 		supervise = TRUE
 	)
-
 	return (p)
 }
 
+#----
+# Generate the Rscript that calculates the response factor for the 'QStype' type based on the 'QSlist' spectra list
+#----
+get_Rscript_for_calib <- function(QSname, QStype, QSlist, thresfP, deconv, qbl, append=FALSE, verbose)
+{
+	paste0("
+		QStype <- '",QStype,"'
+		QSlist <- c('",paste(QSlist, collapse='\',\''),"')
+		thresfP <- ",thresfP,"
+		deconv <- ",deconv,"
+		qbl <- ",qbl,"
+		append <- ",append,"
+		verbose <- ",verbose,"
+
+		QS <- list(sampletype=QStype, fPUL=list(mean=NULL, CV=0), fP=NULL, fR=NULL, MC=NULL, INTG=NULL, fK=NULL)
+		fPUL <- fK <- NULL
+		fCV <- 0
+		sink(STDSLOG, append=append)
+		for (k in 1:length(QSlist)) {
+			S <- QSlist[k]
+			fh<-file(QCQSLOG,'wt')
+			writeLines(paste0('Waiting - Response factor for ',QStype,' : ', S, ' (', k, '/', length(QSlist), ') ...'), fh)
+			close(fh)
+			out <- calib$exe_catch({
+				rq1d$get_response_factors(QStype, S, thresfP=thresfP, deconv=deconv, qbl=qbl, verbose=2)
+			})
+			if (!is.null(out$message)) print(out$message)
+			cat(\"\\n\\n\")
+			if (out$error_occurred) next
+			L <- out$result
+			if (is.na(L$fPUL$mean)) next
+			QS$fP <- rbind(QS$fP, L$fP)
+			QS$fR <- rbind(QS$fR, L$fR)
+			QS$INTG <- rbind(QS$INTG, L$INTG)
+			QS$MC <- L$MC
+			fK <- c(fK, L$fK)
+			fPUL <- c(fPUL, L$fPUL$mean)
+			if (is.na(L$fPUL$CV) || L$fPUL$CV>0) fCV <- L$fPUL$CV
+		}
+		sink()
+		if (!is.null(fPUL)) {
+			QS$fK <- mean(fK)
+			QS$fPUL$mean <- mean(fPUL)
+			QS$fPUL$CV <- ifelse(is.na(fCV) || fCV==0, round(100*sd(fPUL)/mean(fPUL),2), fCV)
+			class(QS) <- 'QC-QS'
+		} else {
+			QS <- NULL
+		}
+		",QSname," <- QS
+	")
+}
+
+#----
+# Launch the calculation of the response factor for "QS-QC" types 
+# -based on the "QSlist/QClist" spectrum lists— as an independent thread.
+#----
+submit_rq1d_calib <- function(rq1d, gv, Rscript_txt)
+{
+	unlink(file.path(rq1d$TMPDIR,"log-*.txt"))
+	unlink(file.path(rq1d$TMPDIR,"output_*.txt"))
+	unlink(file.path(rq1d$TMPDIR,ENDFILE))
+	calib <- list(rq1d = rq1d, exe_catch = exe.catch)
+	saveRDS(calib, file=file.path(gv$outDir,'calib.rds'))
+
+	Rcmd <- paste0("# RSCRIPT: ",RSCRIPT,", Affinity = ",gv$affinity,", Nb cores = ",gv$ncpu,"
+	setwd(\"",gsub("\\\\", "/", gv$outDir),"\")
+	calib <- readRDS('calib.rds')
+	rq1d <- calib$rq1d
+	STDSLOG <- file.path(rq1d$TMPDIR,'stds_QC-QS.txt')
+	QCQSLOG <- file.path(rq1d$TMPDIR,'qc-qs_infos.txt')
+	rq1d$PROFILE <- NULL
+	t <- system.time({",
+		Rscript_txt,"
+	})
+	res <- list(QC=QCvar, QS=QSvar, time = t)
+	saveRDS(res, file='calib.rds')
+	fh <- file(file.path(rq1d$TMPDIR,'",ENDFILE,"'),'wt')
+	out <- \"\\nSUCCESS!\"
+	writeLines(out, fh)
+	close(fh)")
+
+	R_script <- file.path(gv$outDir,'Rcalib.R')
+	write_textlines(R_script, Rcmd, mode="wt")
+
+	L <- list(cmd=RSCRIPT, args = c(R_script))
+
+	p <- processx::process$new(
+		command = L$cmd,
+		args = c(L$args),
+		stdout = "|",
+		stderr = "|",
+		cleanup_tree = TRUE,
+		supervise = TRUE
+	)
+
+	return (p)
+}

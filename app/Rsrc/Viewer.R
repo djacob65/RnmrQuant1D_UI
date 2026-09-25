@@ -122,12 +122,11 @@ outputOptions(output, 'infopeaks', priority=20)
 ##---------------
 ## Output: sampleInfos
 ##---------------
-output$sampleInfos <- renderDataTable({
+output$sampleInfos <- renderDT({
 	if (! rv$samples || ! rv$endproc ) return(NULL)
 	infos <- infolist()
 	infos$infos
 }, options = list(paging = FALSE, searching = FALSE, info = FALSE))
-
 
 ##---------------
 ## Output: samplePeaks
@@ -234,7 +233,8 @@ observeEvent(input$help, {
 			actionButton("copyText", "Copy-Paste", icon = icon("copy")),
 			modalButton("Close")
 		),
-		easyClose = TRUE
+		easyClose = TRUE,
+		size = "l"
 	))
 
 })
