@@ -285,49 +285,6 @@ check_samples_metadata <- function(rq1d, samples, sdir, vendor, onlyintg)
 
 
 #----
-# Compute the response factor for the 'QStype' type based on the 'QSlist' spectra
-#----
-get_response_factors <- function(rq1d, QStype, QSlist, thresfP, deconv, qbl, append=FALSE, verbose)
-{
-	js <- paste0("document.getElementById('calibmsg').textContent = 'Waiting - Response factor for ",QStype," : ")
-	QS <- list(sampletype=QStype, fPUL=list(mean=NULL, CV=0), fP=NULL, fR=NULL, MC=NULL, INTG=NULL, fK=NULL)
-	fPUL <- fK <- NULL
-	fCV <- 0
-	rq1d$PROFILE <- NULL
-	sink(file.path(rq1d$TMPDIR,'stds_QC-QS.txt'), append=append)
-	for (k in 1:length(QSlist)) {
-		S <- QSlist[k]
-		shinyjs::runjs(paste0(js, S, " (", k, "/", length(QSlist), ") ...';"))
-		out <- exe.catch({
-			rq1d$get_response_factors(QStype, S, thresfP=thresfP, deconv=deconv, qbl=qbl, verbose=2)
-		})
-		if (!is.null(out$message)) print(out$message)
-		cat("\n\n")
-		if (out$error_occurred) next
-		L <- out$result
-		if (is.na(L$fPUL$mean)) next
-		QS$fP <- rbind(QS$fP, L$fP)
-		QS$fR <- rbind(QS$fR, L$fR)
-		QS$INTG <- rbind(QS$INTG, L$INTG)
-		QS$MC <- L$MC
-		fK <- c(fK, L$fK)
-		fPUL <- c(fPUL, L$fPUL$mean)
-		if (is.na(L$fPUL$CV) || L$fPUL$CV>0) fCV <- L$fPUL$CV
-	}
-	sink()
-	if (!is.null(fPUL)) {
-		QS$fK <- mean(fK)
-		QS$fPUL$mean <- mean(fPUL)
-		QS$fPUL$CV <- ifelse(is.na(fCV) || fCV==0, round(100*sd(fPUL)/mean(fPUL),2), fCV)
-		class(QS) <- 'QC-QS'
-	} else {
-		QS <- NULL
-	}
-	QS
-}
-
-
-#----
 # Run a rq1d task in an independent thread
 #----
 submit_rq1d_proc <- function(rq1d, gv, reset=TRUE)
