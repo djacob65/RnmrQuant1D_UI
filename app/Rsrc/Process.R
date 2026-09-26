@@ -8,10 +8,13 @@
 # Export the current profile, including any potential modifications
 ##---------------
 output$bQprofile <- downloadHandler(
-    filename = function() { 
-		paste0(gsub("\\..*$", "",gv$PROFILE),'.tsv')
+	filename = function() { 
+		quantfile <- quantprofile()
+		if (!is.null(quantfile))
+			gv$PROFILE <<- file.path(gv$outDir, 'profiles', quantfile)
+		paste0(gsub("\\..*$", "",basename(gv$PROFILE)),'.tsv')
 	},
-    content = function(file) {
+	content = function(file) {
 		rq1d$saveProfile(file)
 	}
 )
