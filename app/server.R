@@ -13,7 +13,7 @@
 server <- function(input, output, session)
 {
 	#set.seed(123)
-	session$allowReconnect("force")
+	#session$allowReconnect("force")
 
 	# Gobal variables
 	gv <- list(
@@ -49,6 +49,7 @@ server <- function(input, output, session)
 		running = FALSE,            # Job state
 		calib_output = NULL,        # Calibration output
 		proc_output = NULL,         # Integration / Quantification output
+		endunzip = FALSE,           # End of unzipping uploaded file
 		endcalib = FALSE,           # End of calibration
 		endproc = FALSE,            # End of processing
 		n_logs = 0                  # Number of processed samples 

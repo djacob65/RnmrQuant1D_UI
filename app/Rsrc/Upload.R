@@ -27,56 +27,43 @@ outputOptions(output, 'FormatSelected', priority=20)
 
 
 ##---------------
-## Uploading Zip file
+## Unzip the pploaded Zip file
 ##---------------
-output$ZipUploaded <- reactive({
-	Sys.sleep(1)
-	if(is.null(input$zipfile) || !rv$Logged) return(0)
-	if (! is.null(input$zipfile) && is.null(input$samplefile)) {
-		shinyjs::runjs( "document.getElementById('waitbox1').style.display = 'block';" )
-		ErrMsg <- ''
-		closeAlert(session, "AlertUpLoadId")
-		# Get & Rename the ZIP file
-		gv$Vendor <<- input$vendor
-		zipfile <- input$zipfile
-		gv$NameZip <<- zipfile$name
-		shinyjs::runjs( paste0("document.title ='",gsub("\\..*$", "", gv$NameZip),"';") )
-		output$title <- renderUI({ tags$h4(gsub("\\..*$", "", gv$NameZip)) })
+observeEvent(input$zipfile, {
+	req(!is.null(input$zipfile), is.null(input$samplefile), rv$Logged)
+	closeAlert(session, "AlertUpLoadId")
+# Get & Rename the ZIP file
+	gv$Vendor <<- input$vendor
+	zipfile <- input$zipfile
+	gv$NameZip <<- zipfile$name
+	shinyjs::runjs( paste0("document.getElementById('waitbox1').style.display = 'block';", 
+							"document.title ='",gsub("\\..*$", "", gv$NameZip),"';") )
+	output$title <- renderUI({ tags$h4(gsub("\\..*$", "", gv$NameZip)) })
+	ext <- tolower(gsub("^.*\\.", "", gv$NameZip))
+	gv$RawZip <<- file.path(gv$outDir,paste0('raw.',ext))
+	file.rename( zipfile$datapath, gv$RawZip )
+	unlink(dirname(zipfile$datapath), recursive=TRUE)
+# Unzip RawZip
+	rv$running <- TRUE
+	rv$endunzip <- FALSE
+	gv$proctype <<- 'unzip'
+	rv$process_job <- submit_unzip(gv)
+})
 
-		#gv$outDir <<- tempdir()
-		ext <- tolower(gsub("^.*\\.", "", gv$NameZip))
-		gv$RawZip <<- file.path(gv$outDir,paste0('raw.',ext))
-		file.rename( zipfile$datapath, gv$RawZip )
-		unlink(dirname(zipfile$datapath), recursive=TRUE)
-		repeat {
-			# Check if is an archive file
-			if ( !(ext %in% ZIPEXT)) {
-				ErrMsg <- paste0("ERROR: The ZIP file must have an appropriate extension (",
-					paste(ZIPEXT, collapse=","),").")
-				break
-			}
-			# Unzip RawZip
-			tryCatch({
-				RAWDIR <- dirname(gv$RawZip)
-				if (ext=='7z') {
-					system(paste0("cd ",RAWDIR,"; \"",ZIP7,"\" x -y ",gv$RawZip))
-				} else {
-					unzip(gv$RawZip, files = NULL, list = FALSE, overwrite = TRUE, junkpaths = FALSE, exdir = RAWDIR, unzip = "internal", setTimes = FALSE)
-				}
-			}, error=function(e) {
-				ErrMsg <- "ERROR: Extraction failed!"
-			})
-			break
-		}
-		shinyjs::runjs( "document.getElementById('waitbox1').style.display = 'none';" )
-		unlink(gv$RawZip)
-		if (nchar(ErrMsg)>0) {
-			dispAlert1(ErrMsg)
-			return(0)
-		} else {
-			shinyjs::disable('vendor')
-			shinyjs::disable('zipfile')
-		}
+output$ZipUploaded <- reactive({
+	req(rv$endunzip)
+	shinyjs::runjs( "document.getElementById('waitbox1').style.display = 'none';" )
+
+	ErrMsg <- ''
+	ErrMsgFile <- file.path(gv$outDir,ENDFILE)
+	if (file.exists(ErrMsgFile))
+		ErrMsg <- readLines(ErrMsgFile)[1]
+	if (nchar(ErrMsg)>0) {
+		dispAlert1(ErrMsg)
+		return(0)
+	} else {
+		shinyjs::disable('vendor')
+		shinyjs::disable('zipfile')
 	}
 	return( ifelse( ! is.null(input$zipfile) , 1, 0 ) )
 })

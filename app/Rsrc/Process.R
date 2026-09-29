@@ -43,6 +43,20 @@ outputOptions(output, 'running', priority=20)
 
 
 # --------------------------
+# Process management of the unzipping uploaded file
+# --------------------------
+unzip_process_job <- function()
+{
+	p <- isolate(rv$process_job)
+	if (!p$is_alive()) {
+		rv$running <- FALSE
+		rv$endunzip <- TRUE
+		rv$process_job <- NULL 
+	}
+}
+
+
+# --------------------------
 # Process management of the calibration
 # --------------------------
 calib_process_job <- function()
@@ -158,6 +172,8 @@ quant_process_job <- function()
 observe({
 	req(rv$running, rv$process_job)
 	invalidateLater(1000, session)
+	if (gv$proctype == 'unzip' )
+		unzip_process_job()
 	if (gv$proctype == 'calib' )
 		calib_process_job()
 	if (gv$proctype %in% c('intg','quant'))

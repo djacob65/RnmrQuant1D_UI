@@ -284,6 +284,51 @@ check_samples_metadata <- function(rq1d, samples, sdir, vendor, onlyintg)
 }
 
 
+submit_unzip <- function(gv)
+{
+	Rcmd <- paste0("# RSCRIPT: ",RSCRIPT,"
+		setwd(\"",gsub("\\\\", "/", gv$outDir),"\")
+		# Unzip RawZip
+		ErrMsg <- ''
+		repeat {
+			extlist <- c('",paste(ZIPEXT, collapse='\',\''),"')
+			ext <- tolower(gsub(\"^.*\\\\.\", \"\",'",gv$NameZip,"'))
+			# Check if is an archive file
+			if ( !(ext %in% extlist)) {
+				ErrMsg <- paste0('ERROR: The ZIP file must have an appropriate extension (',paste(extlist, collapse=\",\"),')')
+				break
+			}
+			tryCatch({
+				if (ext=='7z') {
+					system(paste0('cd ',RAWDIR,'; \"",gsub("\\\\", "/", ZIP7),"\" x -y ','",basename(gv$RawZip),"'))
+				} else {
+					unzip('",gv$RawZip,"', exdir = dirname('",gv$RawZip,"'))
+				}
+			}, error=function(e) {
+				ErrMsg <- 'ERROR: Extraction failed!'
+			})
+			break
+		}
+		unlink('",gv$RawZip,"')
+		fh <- file('",ENDFILE,"','wt')
+		writeLines(ErrMsg, fh)
+		close(fh)
+	")
+
+	R_script <- file.path(gv$outDir,'Runzip.R')
+	write_textlines(R_script, Rcmd, mode="wt")
+
+	processx::process$new(
+		command = RSCRIPT,
+		args = R_script,
+		stdout  = NULL,
+		stderr  = NULL,
+		cleanup = TRUE,
+		cleanup_tree = TRUE,
+		supervise = TRUE
+	)
+}
+
 #----
 # Run a rq1d task in an independent thread
 #----

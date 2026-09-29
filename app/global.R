@@ -91,13 +91,14 @@ if (nchar(ZIP7)==0) {
 	}
 	if (OS == "unix")
 		ZIP7 <- system("which 7zip", intern=TRUE, ignore.stderr=TRUE)
-	if (length(ZIP7)==1 && nchar(ZIP7)>0) {
-		ZIPEXT <- c('zip', '7z')
-		ZIPMINE <- c( 'application/zip', '.7z' )
-	} else {
-		ZIPEXT <- c('zip')
-		ZIPMINE <- c( 'application/zip' )
-	}
+}
+
+if (length(ZIP7)==1 && nchar(ZIP7)>0) {
+	ZIPEXT <- c('zip', '7z')
+	ZIPMINE <- c( 'application/zip', '.7z' )
+} else {
+	ZIPEXT <- c('zip')
+	ZIPMINE <- c( 'application/zip' )
 }
 
 

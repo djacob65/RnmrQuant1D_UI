@@ -254,6 +254,7 @@ output$outCalib <- renderPrint({
 
 		gv$proctype <<- 'calib'
 		rv$process_job <- submit_rq1d_calib(rq1d, gv, Rscript_txt)
+
 		break
 	}
 })

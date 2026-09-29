@@ -23,7 +23,7 @@ passwdInput <- function(inputId, label) {
 
 # Define UI for dataset viewer app ----
 ui <- fluidPage(
-	theme = bslib::bs_theme(version = BSVERSION),
+	#theme = bslib::bs_theme(version = BSVERSION),
 
 	# Custom CSS Styles
 	tags$head(
