@@ -27,7 +27,7 @@ outputOptions(output, 'FormatSelected', priority=20)
 
 
 ##---------------
-## Unzip the pploaded Zip file
+## Unzip the uploaded Zip file
 ##---------------
 observeEvent(input$zipfile, {
 	req(!is.null(input$zipfile), is.null(input$samplefile), rv$Logged)
@@ -43,13 +43,17 @@ observeEvent(input$zipfile, {
 	gv$RawZip <<- file.path(gv$outDir,paste0('raw.',ext))
 	file.rename( zipfile$datapath, gv$RawZip )
 	unlink(dirname(zipfile$datapath), recursive=TRUE)
-# Unzip RawZip
-	rv$running <- TRUE
-	rv$endunzip <- FALSE
+# Unzip the uploaded Zip file in a background R script
 	gv$proctype <<- 'unzip'
+	rv$endunzip <- FALSE
+	rv$running <- TRUE
 	rv$process_job <- submit_unzip(gv)
 })
 
+
+##---------------
+## Check if the unzipping completed successfully
+##---------------
 output$ZipUploaded <- reactive({
 	req(rv$endunzip)
 	shinyjs::runjs( "document.getElementById('waitbox1').style.display = 'none';" )

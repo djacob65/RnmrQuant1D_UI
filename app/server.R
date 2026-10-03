@@ -31,7 +31,7 @@ server <- function(input, output, session)
 		STDS_FILE =NULL,            # file name of the calibration profile
 		affinity = AFFINITY,        # CPU affinity
 		max_ncpu = CORES,           # Max number of cores for parallel computing
-		proctype = 'none',          # Type of the current processing : 'calib' or 'quant'
+		proctype = 'none',          # Type of the current processing : 'unzip', 'calib' or 'quant'
 		ncpu = 0                    # Number of cores used for parallel computing
 	)
 

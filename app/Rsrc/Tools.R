@@ -284,6 +284,9 @@ check_samples_metadata <- function(rq1d, samples, sdir, vendor, onlyintg)
 }
 
 
+#----
+# Unzip the uploaded ZIP file in a background R script
+#----
 submit_unzip <- function(gv)
 {
 	Rcmd <- paste0("# RSCRIPT: ",RSCRIPT,"
@@ -329,83 +332,6 @@ submit_unzip <- function(gv)
 	)
 }
 
-#----
-# Run a rq1d task in an independent thread
-#----
-submit_rq1d_proc <- function(rq1d, gv, reset=TRUE)
-{
-	unlink(file.path(rq1d$TMPDIR,"log-*.txt"))
-	unlink(file.path(rq1d$TMPDIR,"output_*.txt"))
-	unlink(file.path(rq1d$TMPDIR,ENDFILE))
-	saveRDS(rq1d, file=file.path(gv$outDir,'rq1d.rds'))
-
-	zones <- paste(gv$zones, collapse=",")
-	cmpds <- paste(gv$compounds, collapse=",")
-	if (gv$proctype=='intg') {
-		proc_label <- 'Integrals'
-		rq1d_cmd <- paste0("rq1d$proc_Integrals(c(",zones,"), ncpu=",gv$ncpu,", progress=FALSE, verbose=2)")
-	} else {
-		proc_label <- 'Quantification'
-		rq1d_cmd <- paste0("rq1d$proc_Quantification(NULL, c(",zones,"), ncpu=",gv$ncpu,", reset=",reset,", progress=FALSE, verbose=1)")
-	}
-
-	Rcmd <- paste0("# RSCRIPT: ",RSCRIPT,", Affinity = ",gv$affinity,", Nb cores = ",gv$ncpu,"
-		setwd(\"",gsub("\\\\", "/", gv$outDir),"\")
-		rq1d <- readRDS('rq1d.rds')
-		sink('",OUTLOG,"')
-		out <- \"\\nSUCCESS!\"
-		t <- system.time({
-			tryCatch({
-				withCallingHandlers({
-					",rq1d_cmd,"
-				}, message = function(m) { # intercept the message
-					out <<- conditionMessage(m)
-					invokeRestart(\"muffleMessage\")  # prevents the message from appearing in the R console
-				})
-			}, interrupt = function(cnd) { # intercept the interrupt
-				NULL
-			}, error=function(e) {
-				out <<- paste('ERROR: proc_",proc_label," failed :', \"\\n\", paste(e, collapse=\"\\n\"), \"\\n\")
-			})
-		})
-		t
-		sink()
-		res <- list( rq1d = rq1d, time = t )
-		saveRDS(res, file='rq1d.rds')
-		fh <- file(file.path(rq1d$TMPDIR,'",ENDFILE,"'),'wt')
-		writeLines(out, fh)
-		close(fh)
-	")
-
-	R_script <- file.path(gv$outDir,'Rscript.R')
-	write_textlines(R_script, Rcmd, mode="wt")
-
-	# Command preparation with/without affinity setting, according to the OS
-	if (gv$affinity==0)
-		OS <- "unknown"
-	if (OS == "unix") {
-		L <- list(cmd = "taskset", args = c("-c", paste(0:(gv$ncpu-1),collapse=","), RSCRIPT, R_script))
-	} else if (OS == "windows") {
-		ps_cmd <- sprintf(
-			'$p = Start-Process -FilePath "%s" -ArgumentList "%s" -WindowStyle Hidden -PassThru;
-			$p.ProcessorAffinity = %d; $p.WaitForExit()',
-			RSCRIPT, R_script, sum(2^(0:(gv$ncpu-1)))
-		)
-		L <- list(cmd="powershell", args = c("-NoProfile", "-Command", ps_cmd))
-	} else {
-		L <- list(cmd=RSCRIPT, args = c(R_script))
-	}
-
-	p <- processx::process$new(
-		command = L$cmd,
-		args = c(L$args),
-		stdout = "|",
-		stderr = "|",
-		cleanup_tree = TRUE,
-		supervise = TRUE
-	)
-	return (p)
-}
 
 #----
 # Generate the Rscript that calculates the response factor for the 'QStype' type based on the 'QSlist' spectra list
@@ -478,6 +404,7 @@ submit_rq1d_calib <- function(rq1d, gv, Rscript_txt)
 	STDSLOG <- file.path(rq1d$TMPDIR,'stds_QC-QS.txt')
 	QCQSLOG <- file.path(rq1d$TMPDIR,'qc-qs_infos.txt')
 	rq1d$PROFILE <- NULL
+	options(width=128)
 	t <- system.time({",
 		Rscript_txt,"
 	})
@@ -502,5 +429,85 @@ submit_rq1d_calib <- function(rq1d, gv, Rscript_txt)
 		supervise = TRUE
 	)
 
+	return (p)
+}
+
+
+#----
+# Run a rq1d task in an independent thread
+#----
+submit_rq1d_proc <- function(rq1d, gv, reset=TRUE)
+{
+	unlink(file.path(rq1d$TMPDIR,"log-*.txt"))
+	unlink(file.path(rq1d$TMPDIR,"output_*.txt"))
+	unlink(file.path(rq1d$TMPDIR,ENDFILE))
+	saveRDS(rq1d, file=file.path(gv$outDir,'rq1d.rds'))
+
+	zones <- paste(gv$zones, collapse=",")
+	cmpds <- paste(gv$compounds, collapse=",")
+	if (gv$proctype=='intg') {
+		proc_label <- 'Integrals'
+		rq1d_cmd <- paste0("rq1d$proc_Integrals(c(",zones,"), ncpu=",gv$ncpu,", progress=FALSE, verbose=2)")
+	} else {
+		proc_label <- 'Quantification'
+		rq1d_cmd <- paste0("rq1d$proc_Quantification(NULL, c(",zones,"), ncpu=",gv$ncpu,", reset=",reset,", progress=FALSE, verbose=1)")
+	}
+
+	Rcmd <- paste0("# RSCRIPT: ",RSCRIPT,", Affinity = ",gv$affinity,", Nb cores = ",gv$ncpu,"
+		setwd(\"",gsub("\\\\", "/", gv$outDir),"\")
+		rq1d <- readRDS('rq1d.rds')
+		options(width=128)
+		sink('",OUTLOG,"')
+		out <- \"\\nSUCCESS!\"
+		t <- system.time({
+			tryCatch({
+				withCallingHandlers({
+					",rq1d_cmd,"
+				}, message = function(m) { # intercept the message
+					out <<- conditionMessage(m)
+					invokeRestart(\"muffleMessage\")  # prevents the message from appearing in the R console
+				})
+			}, interrupt = function(cnd) { # intercept the interrupt
+				NULL
+			}, error=function(e) {
+				out <<- paste('ERROR: proc_",proc_label," failed :', \"\\n\", paste(e, collapse=\"\\n\"), \"\\n\")
+			})
+		})
+		t
+		sink()
+		res <- list( rq1d = rq1d, time = t )
+		saveRDS(res, file='rq1d.rds')
+		fh <- file(file.path(rq1d$TMPDIR,'",ENDFILE,"'),'wt')
+		writeLines(out, fh)
+		close(fh)
+	")
+
+	R_script <- file.path(gv$outDir,'Rscript.R')
+	write_textlines(R_script, Rcmd, mode="wt")
+
+	# Command preparation with/without affinity setting, according to the OS
+	if (gv$affinity==0)
+		OS <- "unknown"
+	if (OS == "unix") {
+		L <- list(cmd = "taskset", args = c("-c", paste(0:(gv$ncpu-1),collapse=","), RSCRIPT, R_script))
+	} else if (OS == "windows") {
+		ps_cmd <- sprintf(
+			'$p = Start-Process -FilePath "%s" -ArgumentList "%s" -WindowStyle Hidden -PassThru;
+			$p.ProcessorAffinity = %d; $p.WaitForExit()',
+			RSCRIPT, R_script, sum(2^(0:(gv$ncpu-1)))
+		)
+		L <- list(cmd="powershell", args = c("-NoProfile", "-Command", ps_cmd))
+	} else {
+		L <- list(cmd=RSCRIPT, args = c(R_script))
+	}
+
+	p <- processx::process$new(
+		command = L$cmd,
+		args = c(L$args),
+		stdout = "|",
+		stderr = "|",
+		cleanup_tree = TRUE,
+		supervise = TRUE
+	)
 	return (p)
 }
