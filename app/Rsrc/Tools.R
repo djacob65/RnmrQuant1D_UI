@@ -303,7 +303,7 @@ submit_unzip <- function(gv)
 			}
 			tryCatch({
 				if (ext=='7z') {
-					system(paste0('cd ',RAWDIR,'; \"",gsub("\\\\", "/", ZIP7),"\" x -y ','",basename(gv$RawZip),"'))
+					system(paste0('\"",gsub("\\\\", "/", ZIP7),"\" x -y ','",basename(gv$RawZip),"'))
 				} else {
 					unzip('",gv$RawZip,"', exdir = dirname('",gv$RawZip,"'))
 				}

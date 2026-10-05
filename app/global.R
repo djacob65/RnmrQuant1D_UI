@@ -90,7 +90,7 @@ if (nchar(ZIP7)==0) {
 			ZIP7 <- paste0(path$Path64,"\\7z.exe")
 	}
 	if (OS == "unix")
-		ZIP7 <- system("which 7zip", intern=TRUE, ignore.stderr=TRUE)
+		ZIP7 <- system("which 7z", intern=TRUE, ignore.stderr=TRUE)
 }
 
 if (length(ZIP7)==1 && nchar(ZIP7)>0) {

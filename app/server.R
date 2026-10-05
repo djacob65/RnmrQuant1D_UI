@@ -65,8 +65,8 @@ server <- function(input, output, session)
 	start.time <- 0
 
 	# List of widgets by category – useful for enabling or disabling them during reset or running
-	intg_widgets <- c('sequence','externalIntg','intgprofile','externIntgFile','listcmpds','intgInvBtn','intgpattern','listsamples')
 	calib_widgets <- c('sequence2', 'deconv', 'optphc1', 'thresfP', 'qbl', 'externalCalib', 'calibprofile', 'externCalibFile')
+	intg_widgets <- c('sequence','externalIntg','intgprofile','externIntgFile','intgInvBtn','intgpattern','listsamples', 'listcmpds')
 	quant_widgets <- c('externalQuant','quantprofile','externQuantFile','quantInvBtn','quantpattern','listsamples2','listcmpds2')
 
 	# Load source code

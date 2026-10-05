@@ -98,9 +98,9 @@ observeEvent(input$confirm_intg, {
 	removeModal()
 	rv$intgreset <- TRUE
 	shinyjs::disable("intgReset")
-	shinyjs::enable("intgButton")
 	for (widget in intg_widgets)
 		shinyjs::enable(widget)
+	updateButton(session, "intgButton", label = " Launch Integration", style = "info", disabled = FALSE)
 	rv$proc_output <- NULL
 }, ignoreInit = TRUE)
 

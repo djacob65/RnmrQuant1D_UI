@@ -7,12 +7,13 @@ ENV  DEBIAN_FRONTEND=noninteractive \
      TZ=Europe/Paris
 RUN  ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Install essential libraries
+# Install essential libraries & tools
 RUN  apt-get update && apt-get install -y \
      sudo ca-certificates wget curl git vim ed unzip \
      libcurl4-gnutls-dev libcairo2-dev libv8-dev libssl-dev \
      openssl gdebi-core pkgconf libxml2-dev \
      build-essential  software-properties-common \
+     p7zip-full p7zip-rar \
 # Install Repositories
   && sh -c 'echo "deb https://cloud.r-project.org/bin/linux/ubuntu focal-cran40/" >> /etc/apt/sources.list' \
   && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 \

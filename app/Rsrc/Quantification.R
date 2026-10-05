@@ -106,9 +106,9 @@ observeEvent(input$confirm_quant, {
 	removeModal()
 	rv$quantreset <- TRUE
 	shinyjs::disable("quantReset")
-	shinyjs::enable("quantButton")
 	for (widget in quant_widgets)
 		shinyjs::enable(widget)
+	updateButton(session, "quantButton", label = " Launch Quantification", style = "info", disabled = FALSE)
 	rv$proc_output <- NULL
 }, ignoreInit = TRUE)
 
@@ -329,7 +329,6 @@ observeEvent(input$quantStop, {
 	dispAlert4(paste("Warning: Processing stopped by the user at",rv$n_logs,"/",nrow(rq1d$SAMPLES)))
 	shinyjs::enable("calibReset")
 	shinyjs::enable("samplesReset")
-	updateButton(session, "quantButton", label = " Launch Quantification", style = "info", disabled = TRUE)
 	rv$proc_output <- NULL
 	if (file.exists(file.path(gv$outDir,OUTLOG)))
 		rv$proc_output <- readLines(file.path(gv$outDir,OUTLOG))
