@@ -436,7 +436,7 @@ submit_rq1d_calib <- function(rq1d, gv, Rscript_txt)
 #----
 # Run a rq1d task in an independent thread
 #----
-submit_rq1d_proc <- function(rq1d, gv, reset=TRUE)
+submit_rq1d_proc <- function(rq1d, gv, proctype='quant', reset=TRUE)
 {
 	unlink(file.path(rq1d$TMPDIR,"log-*.txt"))
 	unlink(file.path(rq1d$TMPDIR,"output_*.txt"))
@@ -445,12 +445,12 @@ submit_rq1d_proc <- function(rq1d, gv, reset=TRUE)
 
 	zones <- paste(gv$zones, collapse=",")
 	cmpds <- paste(gv$compounds, collapse=",")
-	if (gv$proctype=='intg') {
-		proc_label <- 'Integrals'
-		rq1d_cmd <- paste0("rq1d$proc_Integrals(c(",zones,"), ncpu=",gv$ncpu,", progress=FALSE, verbose=2)")
-	} else {
+	if (proctype == 'quant') {
 		proc_label <- 'Quantification'
 		rq1d_cmd <- paste0("rq1d$proc_Quantification(NULL, c(",zones,"), ncpu=",gv$ncpu,", reset=",reset,", progress=FALSE, verbose=1)")
+	} else {
+		proc_label <- 'Integrals'
+		rq1d_cmd <- paste0("rq1d$proc_Integrals(c(",zones,"), ncpu=",gv$ncpu,", progress=FALSE, verbose=2)")
 	}
 
 	Rcmd <- paste0("# RSCRIPT: ",RSCRIPT,", Affinity = ",gv$affinity,", Nb cores = ",gv$ncpu,"

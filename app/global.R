@@ -121,6 +121,10 @@ urls_doc <- list(
 # Bootstrap version (3, 4 or 5)
 BSVERSION <- ifelse(!is.null(conf$BSVERSION), as.numeric(conf$BSVERSION), 3)
 
+# Possible Tags on spectra plots depending on DEV mode
+TAGS_LIST <- c("None" = "none", "Peak Id" = "peak", "Name" = "name")
+if(DEV)	TAGS_LIST <- c(TAGS_LIST, "All Peaks" = "allpeaks")
+
 # Spectra colors : original, model, residus
 COLSPEC <- c('gray70','#86c1db','deeppink4')
 

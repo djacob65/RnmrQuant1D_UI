@@ -428,8 +428,7 @@ ui <- fluidPage(
 							tags$div( id = "options_panel", style = "display: none;",
 								fluidRow(
 									column(2,
-										radioButtons("tags", "Tags:", c("None" = "none", "Peak Id" = "peak", "Name" = "name"),
-											inline = FALSE)
+										radioButtons("tags", "Tags:", TAGS_LIST, inline = FALSE)
 									),
 									column(2,
 										radioButtons("showlegend", "Legend:", c("None" = "none", "Top" = "top", "Bottom" = "bottom"),

@@ -309,14 +309,14 @@ output$outIntg <- renderPrint({
 		intg_pb(paste('Initialize the cluster (',gv$ncpu,' cores) ...'), 0)
 		session$sendCustomMessage("proc_status", TRUE)
 
+		gv$proctype <<- 'intg'
 		rv$running <- TRUE
 		rv$endproc <- FALSE
 		rv$n_logs <- 0
 		rv$proc_output <- NULL
 
 		# Initialize the cluster then launch the processing
-		gv$proctype <<- 'intg'
-		rv$process_job <- submit_rq1d_proc(rq1d, gv)
+		rv$process_job <- submit_rq1d_proc(rq1d, gv, 'intg')
 		break
 	}
 })

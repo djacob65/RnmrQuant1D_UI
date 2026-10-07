@@ -109,6 +109,7 @@ observeEvent(input$confirm_quant, {
 	for (widget in quant_widgets)
 		shinyjs::enable(widget)
 	updateButton(session, "quantButton", label = " Launch Quantification", style = "info", disabled = FALSE)
+	lstbtn$quant <<- input$quantButton + 1
 	rv$proc_output <- NULL
 }, ignoreInit = TRUE)
 
@@ -293,14 +294,14 @@ output$outQuant <- renderPrint({
 		quant_pb(paste('Initialize the cluster (',gv$ncpu,' cores) ...'), 0)
 		session$sendCustomMessage("proc_status", TRUE)
 
+		gv$proctype <<- 'quant'
 		rv$running <- TRUE
 		rv$endproc <- FALSE
 		rv$n_logs <- 0
 		rv$proc_output <- NULL
 
 		# Initialize the cluster then launch the processing
-		gv$proctype <<- 'quant'
-		rv$process_job <- submit_rq1d_proc(rq1d, gv)
+		rv$process_job <- submit_rq1d_proc(rq1d, gv, 'quant')
 		break
 	}
 })
