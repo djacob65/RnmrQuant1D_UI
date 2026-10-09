@@ -121,15 +121,15 @@ urls_doc <- list(
 # Bootstrap version (3, 4 or 5)
 BSVERSION <- ifelse(!is.null(conf$BSVERSION), as.numeric(conf$BSVERSION), 3)
 
-# Possible Tags on spectra plots depending on DEV mode
+# Possible Tags on spectra plots
 TAGS_LIST <- c("None" = "none", "Peak Id" = "peak", "Name" = "name")
-if(DEV)	TAGS_LIST <- c(TAGS_LIST, "All Peaks" = "allpeaks")
+TAGS_LIST <- c(TAGS_LIST, "All Peaks" = "allpeaks")
 
 # Spectra colors : original, model, residus
 COLSPEC <- c('gray70','#86c1db','deeppink4')
 
 # Compound colors
-COLCPMDS <- c('#5ba8c9','dodgerblue1','#5b75c9','slateblue2','#8334b8','#A6B03A')
+COLCPMDS <- c('#5ba8c9','dodgerblue1','#5b75c9','slateblue2','#8334b8','#a6b03a')
 
 # Message Log file of the core process
 OUTLOG <- 'rq1d.out'

@@ -194,7 +194,7 @@ ui <- fluidPage(
 						checkboxInput("externalIntg", "External profile", value = FALSE)
 					),
 					column(8,
-						div( style="max-height: 200px; overflow: scroll;",
+						div( 
 							selectInput(inputId = "listcmpds", label = "(Un)Select Compounds", width="100%",
 								choices = c(), selected = NULL, multiple = TRUE),
 							bsButton("intgInvBtn", label = "Invert selection", style="info", disabled = FALSE)
@@ -202,7 +202,7 @@ ui <- fluidPage(
 					)),
 					column(12, tags$br(), tags$br()),
 					column(12,
-						div( style="max-height: 300px; overflow: scroll;",
+						div( 
 							selectInput( inputId = "listsamples", width="100%", label   = "(Un)Select Samples",
 								choices = c(), selected = NULL, multiple = TRUE)
 						),
@@ -338,7 +338,7 @@ ui <- fluidPage(
 						checkboxInput("externalQuant", "External profile", value = FALSE)
 					),
 					column(8,
-						div( style="max-height: 200px; overflow: scroll;",
+						div(
 							selectInput(inputId = "listcmpds2", label = "(Un)Select Compounds", width="100%",
 								choices = c(), selected = NULL, multiple = TRUE),
 							bsButton("quantInvBtn", label = "Invert selection", style="info", disabled = FALSE)
@@ -346,7 +346,7 @@ ui <- fluidPage(
 					)),
 					column(12, tags$br(), tags$br()),
 					column(12,
-						div( style="max-height: 400px; overflow: scroll;",
+						div(
 							selectInput( inputId = "listsamples2", width="100%", label   = "(Un)Select Samples",
 								choices = c(), selected = NULL, multiple = TRUE)
 						),

@@ -1,6 +1,6 @@
 /* scrollbar */
 ::-webkit-scrollbar {
-	width: 0px;
+	width: 5px;
 	height: 0px;
 }
 ::-webkit-scrollbar-thumb {
@@ -72,6 +72,15 @@ body {
 	padding: 5px;
 	box-sizing: border-box;
 	z-index: 1000;
+}
+
+#listsamples + .selectize-control > .selectize-input {
+    max-height: 156px !important;
+    overflow-y: auto !important;
+ }
+ 
+#selsamples, #selcmpds {
+    overflow-y: auto !important;
 }
 
 .tabbable {
