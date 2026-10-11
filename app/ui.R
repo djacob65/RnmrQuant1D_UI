@@ -432,7 +432,7 @@ ui <- fluidPage(
 									),
 									column(2,
 										radioButtons("showlegend", "Legend:", c("None" = "none", "Top" = "top", "Bottom" = "bottom"),
-											selected='bottom', inline = FALSE)
+											selected='top', inline = FALSE)
 									),
 									column(2,
 										checkboxInput("showgrid", "Show gridlines", TRUE),
@@ -461,6 +461,8 @@ ui <- fluidPage(
 										)
 									),
 									DTOutput("samplePeaks"),
+									tags$br(),
+									verbatimTextOutput("peak_row_sel"),
 									tags$br(), tags$br(), tags$br(), tags$br()
 								)
 							)

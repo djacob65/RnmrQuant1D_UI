@@ -29,6 +29,11 @@ gp <- list(
 	font2 = list(family = "Arial", size = 14)
 )
 
+# Reactive values ​​for the x and y limits of the spectrum graph
+gprv <- reactiveValues(
+	xmin = NULL,
+	xmax = NULL
+)
 
 ##---------------
 ## Update rq1d object & both lists of samples and compounds
@@ -128,11 +133,11 @@ output$sampleInfos <- renderDT({
 	infos$infos
 }, options = list(paging = FALSE, searching = FALSE, info = FALSE))
 
+
 ##---------------
 ## Output: samplePeaks
 ##---------------
-output$samplePeaks <- renderDT({
-	if (! rv$samples || ! rv$endproc ) return(NULL)
+DTpeaks <- reactive({
 	infos <- infolist()
 	peaklist <- infos$peaklist
 	peaks <- infos$peaks
@@ -142,7 +147,33 @@ output$samplePeaks <- renderDT({
 	}
 	peaks <- cbind(rownames(peaks), peaks)
 	colnames(peaks)[1] <- 'Peak id'
-	rq1d$displayTable(peaks, nbdec=4)
+	if (!is.null(gprv$xmin) && !is.null(gprv$xmax)) # if zoom 
+		peaks <- peaks[ peaks$ppm>gprv$xmin & peaks$ppm<gprv$xmax, , drop=F]
+	peaks
+})
+
+output$samplePeaks <- renderDT({
+	if (! rv$samples || ! rv$endproc ) return(NULL)
+	rq1d$displayTable(DTpeaks(), nbdec=4)
+})
+
+output$peak_row_sel <- renderPrint({
+	rowsel <- input$samplePeaks_rows_selected
+	if (!is.null(rowsel)) {
+		peaks <- DTpeaks()
+		if (nrow(peaks[rowsel,])==2) {
+			idx <- which( unique(rq1d$SAMPLES[,2])==isolate(input$selsamples) )
+			spec <- rq1d$specList[[idx]]
+			PPM <- 0.5*(peaks[rowsel[2],3]+peaks[rowsel[1],3])
+			HZ <- abs(peaks[rowsel[2],3]-peaks[rowsel[1],3])*spec$acq$SFO1
+			RATIO <- peaks[rowsel[2],4]/peaks[rowsel[1],4]
+			if (RATIO<1) RATIO <- 1/RATIO
+			DS <- 200*abs(peaks[rowsel[2],5]-peaks[rowsel[1],5])/(peaks[rowsel[2],5]+peaks[rowsel[1],5])
+			V <- c( round(PPM,4), round(HZ,1), round(RATIO,4), round(DS,2) )
+			names(V) <- c('Center', 'Hz', 'Ratio Amp.', 'dSigma(%)')
+			V
+		}
+	}
 })
 
 
@@ -180,9 +211,22 @@ output$spectrum<-renderPlotly({
 	} else {
 		gp$ylabel = gp$xlabel = '' 
 	}
-	rq1d$plot_cmpds(idx, input$selcmpds, gp)
+	p <- rq1d$plot_cmpds(idx, input$selcmpds, gp)
+	p$x$source <- "spectrum"
+	p %>% event_register("plotly_relayout")
 })
 
+# Zoom detection
+observeEvent(event_data("plotly_relayout", source = "spectrum"), {
+	ev <- event_data("plotly_relayout", source = "spectrum")
+	if (!is.null(ev[["xaxis.range[0]"]])) {
+		gprv$xmin <- ev[["xaxis.range[1]"]]
+		gprv$xmax <- ev[["xaxis.range[0]"]]
+	} else if (!is.null(ev[["xaxis.autorange"]])) {
+		gprv$xmin <- NULL
+		gprv$xmax <- NULL
+	}
+})
 
 ##---------------
 # Export the RData file
