@@ -30,10 +30,11 @@ gp <- list(
 )
 
 # Reactive values ​​for the x and y limits of the spectrum graph
-gprv <- reactiveValues(
-	xmin = NULL,
-	xmax = NULL
-)
+gprv <- reactiveValues(	xmin = NULL, xmax = NULL )
+
+# Saving selections is necessary for infolist reactivity
+gpgv <- list(selsamples='', selcmpds='')
+
 
 ##---------------
 ## Update rq1d object & both lists of samples and compounds
@@ -49,11 +50,17 @@ observeEvent( c(rv$samples, rv$endproc), {
 	updateSelectInput(session, "selsamples", choices = v_options, selected=v_options)
 })
 
+
 ##---------------
 ## Retrieve information regarding both the selected spectrum and the compound.
 ##---------------
 infolist <- reactive({
 	if (! rv$samples || ! rv$endproc ) return(NULL)
+	if (input$selsamples != gpgv$selsamples || input$selcmpds != gpgv$selcmpds) {
+		gpgv <<- list( selsamples=input$selsamples,  selcmpds=input$selcmpds )
+		gprv$xmin <- NULL
+		gprv$xmax <- NULL
+	}
 	samples <-rq1d$SAMPLES
 	idx <- which( unique(samples[,2])==input$selsamples )
 	quantif <- rq1d$PROFILE$quantif
@@ -85,7 +92,13 @@ infolist <- reactive({
 	peaks$integral <- round(peaks$integral)
 	peaks$asym <- round(peaks$asym)
 	peaks$SNR <- round(peaks$SNR)
-	peaks <- peaks[ peaks$SNR>=input$snr, ]
+	peaks <- peaks[ peaks$SNR>=input$snr, , drop=F]
+	if (input$cmpdpeaks) { # Only the peaks of compounds
+		pklist <- as.numeric(strsplit(paste(peaklist[,2], collapse=","),',')[[1]])
+		peaks <- peaks[rownames(peaks) %in% pklist[!is.na(pklist)], ]
+	}
+	if (!is.null(gprv$xmin) && !is.null(gprv$xmax)) # if zoom 
+		peaks <- peaks[ peaks$ppm>gprv$xmin & peaks$ppm<gprv$xmax, , drop=F]
 	list(samples=samples, idx=idx, infos=infos, peaklist=peaklist, peaks=peaks)
 })
 
@@ -96,13 +109,19 @@ infolist <- reactive({
 observeEvent(input$logButton2, {
 	infos <- infolist()
 	if (input$onlyintg) {
-		LogFile <- paste0(rq1d$TMPDIR,'/log-',infos$samples[infos$idx,2],'.txt')
+		LogFile <- paste0(rq1d$TMPDIR,'/log-',infos$samples[infos$idx,1],'-',infos$samples[infos$idx,3],'.txt')
 		title_log <- "Integration log"
 	} else {
 		LogFile <- paste0(rq1d$TMPDIR,'/output_',infos$samples[infos$idx,1],'_',infos$samples[infos$idx,3],'.txt')
 		title_log <- "Quantification log"
 	}
-	content <- readLines(LogFile, warn = FALSE)
+	content <- tryCatch({
+		readLines(LogFile, warn = FALSE)
+	}, error = function(e) {
+		content <- paste("Error: open file", LogFile, "failed\n", paste(e, collapse = "\n"), "\n")
+	}, warning = function(w) {
+		content <- paste("Warning: open file", LogFile, "failed\n", paste(w, collapse = "\n"), "\n")
+	})
 	showModal(modalDialog(
 		title = title_log,
 		tags$pre(paste(content, collapse = "\n")),
@@ -123,6 +142,16 @@ output$infopeaks <- reactive({
 outputOptions(output, 'infopeaks', suspendWhenHidden=FALSE)
 outputOptions(output, 'infopeaks', priority=20)
 
+##---------------
+## Output: conditional value for profile information
+##---------------
+output$infoprofile <- reactive({
+	if (input$showprofile) return(1)
+	return(0)
+})
+outputOptions(output, 'infoprofile', suspendWhenHidden=FALSE)
+outputOptions(output, 'infoprofile', priority=20)
+
 
 ##---------------
 ## Output: sampleInfos
@@ -137,42 +166,39 @@ output$sampleInfos <- renderDT({
 ##---------------
 ## Output: samplePeaks
 ##---------------
-DTpeaks <- reactive({
-	infos <- infolist()
-	peaklist <- infos$peaklist
-	peaks <- infos$peaks
-	if (input$cmpdpeaks) { # Only the peaks of compounds
-		pklist <- as.numeric(strsplit(paste(peaklist[,2], collapse=","),',')[[1]])
-		peaks <- peaks[rownames(peaks) %in% pklist[!is.na(pklist)], ]
-	}
+
+get_peaks <- function() {
+	peaks <- infolist()$peaks
 	peaks <- cbind(rownames(peaks), peaks)
 	colnames(peaks)[1] <- 'Peak id'
-	if (!is.null(gprv$xmin) && !is.null(gprv$xmax)) # if zoom 
-		peaks <- peaks[ peaks$ppm>gprv$xmin & peaks$ppm<gprv$xmax, , drop=F]
 	peaks
-})
+}
 
 output$samplePeaks <- renderDT({
 	if (! rv$samples || ! rv$endproc ) return(NULL)
-	rq1d$displayTable(DTpeaks(), nbdec=4)
+	rq1d$displayTable(get_peaks(), nbdec=4)
 })
 
+# Peak selection
 output$peak_row_sel <- renderPrint({
 	rowsel <- input$samplePeaks_rows_selected
-	if (!is.null(rowsel)) {
-		peaks <- DTpeaks()
-		if (nrow(peaks[rowsel,])==2) {
-			idx <- which( unique(rq1d$SAMPLES[,2])==isolate(input$selsamples) )
-			spec <- rq1d$specList[[idx]]
-			PPM <- 0.5*(peaks[rowsel[2],3]+peaks[rowsel[1],3])
-			HZ <- abs(peaks[rowsel[2],3]-peaks[rowsel[1],3])*spec$acq$SFO1
-			RATIO <- peaks[rowsel[2],4]/peaks[rowsel[1],4]
+	if (!is.null(rowsel) && length(rowsel)>1) {
+		peaks <- get_peaks()
+		M <- NULL
+		idx <- which( unique(rq1d$SAMPLES[,2])==isolate(input$selsamples) )
+		spec <- rq1d$specList[[idx]]
+		rowsel <- rowsel[order(rowsel)]
+		for( k in 2:nrow(peaks[rowsel,])) {
+			PPM <- 0.5*(peaks[rowsel[k-1],3]+peaks[rowsel[k],3])
+			HZ <- abs(peaks[rowsel[k],3]-peaks[rowsel[k-1],3])*spec$acq$SFO1
+			RATIO <- peaks[rowsel[k],4]/peaks[rowsel[k-1],4]
 			if (RATIO<1) RATIO <- 1/RATIO
-			DS <- 200*abs(peaks[rowsel[2],5]-peaks[rowsel[1],5])/(peaks[rowsel[2],5]+peaks[rowsel[1],5])
-			V <- c( round(PPM,4), round(HZ,1), round(RATIO,4), round(DS,2) )
-			names(V) <- c('Center', 'Hz', 'Ratio Amp.', 'dSigma(%)')
-			V
+			DS <- 200*abs(peaks[rowsel[k],5]-peaks[rowsel[k-1],5])/(peaks[rowsel[k],5]+peaks[rowsel[k-1],5])
+			M <- rbind( M, c( paste0(peaks[rowsel[k-1],1],'-',peaks[rowsel[k],1]), 
+				round(PPM,4), round(HZ,1), round(RATIO,4), round(DS,2) ) )
 		}
+		colnames(M) <- c('Peaks', 'Center', 'Hz', 'Ratio Amp.', 'dSigma(%)')
+		M
 	}
 })
 
@@ -186,6 +212,23 @@ output$outInfos <- renderPrint({
 	infos <- infolist()
 	cat("\n")
 	print(infos$peaklist)
+})
+
+##---------------
+## Output: profile information
+##---------------
+output$outProfile <- renderDT({
+	if (! rv$samples || ! rv$endproc) return(NULL)
+	unlink(file.path(gp$IMGDIR, paste0('*.',gp$mode)))
+	infos <- infolist()
+	quantif <- rq1d$PROFILE$quantif
+	M <- as.data.frame(quantif[ quantif$compound==input$selcmpds, c(1:7), drop=F])
+	M[,4] <- sapply(M[,4], function(x) gsub(',', ', ',x))
+	M[,5] <- sapply(M[,5], function(x) gsub(',', ', ',x))
+	M[,6] <- sapply(M[,6], function(x) gsub(',', ', ',x))
+	rownames(M) <- NULL
+	colnames(M) <- c('Compound','Pattern','Params1','Params2','Params3','Calibration','snrmin')
+	rq1d$displayTable(M)
 })
 
 
@@ -214,6 +257,7 @@ output$spectrum<-renderPlotly({
 	p <- rq1d$plot_cmpds(idx, input$selcmpds, gp)
 	p$x$source <- "spectrum"
 	p %>% event_register("plotly_relayout")
+	p
 })
 
 # Zoom detection
@@ -227,6 +271,7 @@ observeEvent(event_data("plotly_relayout", source = "spectrum"), {
 		gprv$xmax <- NULL
 	}
 })
+
 
 ##---------------
 # Export the RData file

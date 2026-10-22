@@ -441,6 +441,7 @@ ui <- fluidPage(
 									),
 									column(3,
 										checkboxInput("showpeaklist", "Show peaklist", FALSE),
+										checkboxInput("showprofile", "Show profile", FALSE),
 										checkboxInput("residus", "Plot with residus", FALSE),
 										checkboxInput("specbl", "Spectrum with BL correction", T)
 									)
@@ -449,7 +450,12 @@ ui <- fluidPage(
 							column(12,
 								withSpinner(plotlyOutput("spectrum"), type=7),
 								conditionalPanel(condition="output.infopeaks==1",
-									verbatimTextOutput("outInfos")
+									verbatimTextOutput("outInfos"),
+									tags$br()
+								),
+								conditionalPanel(condition="output.infoprofile==1",
+									DTOutput("outProfile"),
+									tags$br()
 								),
 								conditionalPanel(condition="input.showpeaklist==1",
 									fluidRow(

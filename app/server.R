@@ -17,22 +17,23 @@ server <- function(input, output, session)
 
 	# Gobal variables
 	gv <- list(
-		sessid = '',                # Session Identifier
-		Vendor = NULL,              # Instrument/Vendor/Format
-		outDir = NULL,              # directory to output the resulting files
-		RawZip = NULL,              # the full path name of the uploaded ZIP file (raw.zip)
-		NameZip = NULL,             # the name of the uploaded ZIP file
-		SampleFile = NULL,          # the full path name of the uploaded Sample file
-		SampleFilename = '',        # the name of the uploaded Sample file
-		samples = NULL,             # the sample matrix
-		fac_dilution = DIL_FAC,     # Default dilution factor value
-		hasQCQS = FALSE,            # TRUE if QC/QS spectra are provided
-		PROFILE = NULL,             # file name of the quantification profile
-		STDS_FILE =NULL,            # file name of the calibration profile
-		affinity = AFFINITY,        # CPU affinity
-		max_ncpu = CORES,           # Max number of cores for parallel computing
-		proctype = 'none',          # Type of the current processing : 'unzip', 'calib', 'intg' or 'quant'
-		ncpu = 0                    # Number of cores used for parallel computing
+		sessid = '',                 # Session Identifier
+		Vendor = NULL,               # Instrument/Vendor/Format
+		outDir = NULL,               # directory to output the resulting files
+		RawZip = NULL,               # the full path name of the uploaded ZIP file (raw.zip)
+		NameZip = NULL,              # the name of the uploaded ZIP file
+		SampleFile = NULL,           # the full path name of the uploaded Sample file
+		SampleFilename = '',         # the name of the uploaded Sample file
+		samples = NULL,              # the sample matrix
+		fac_dilution = DIL_FAC,      # Default dilution factor value
+		adjust_ident = ADJUST_IDENT, # Adjustment after identification
+		hasQCQS = FALSE,             # TRUE if QC/QS spectra are provided
+		PROFILE = NULL,              # file name of the quantification profile
+		STDS_FILE =NULL,             # file name of the calibration profile
+		affinity = AFFINITY,         # CPU affinity
+		max_ncpu = CORES,            # Max number of cores for parallel computing
+		proctype = 'none',           # Type of the current processing : 'unzip', 'calib', 'intg' or 'quant'
+		ncpu = 0                     # Number of cores used for parallel computing
 	)
 
 	# Reactive values

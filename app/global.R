@@ -101,6 +101,8 @@ if (length(ZIP7)==1 && nchar(ZIP7)>0) {
 	ZIPMINE <- c( 'application/zip' )
 }
 
+# Adjustment after identification
+ADJUST_IDENT <-  ifelse(!is.null(conf$ADJUST_IDENT) && conf$ADJUST_IDENT==1, TRUE, FALSE) 
 
 # Dilution factor by default
 DIL_FAC <- ifelse(!is.null(conf$DILUTION_FAC), as.numeric(conf$DILUTION_FAC), 0.8)

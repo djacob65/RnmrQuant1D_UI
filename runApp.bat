@@ -22,27 +22,12 @@ if not defined RPATH (
 
 echo R path = %RPATH%
 
-for /f "tokens=2 delims==" %%A in ('wmic cpu get NumberOfLogicalProcessors /value') do (
-    set TOTAL_LOGICAL=%%A
-)
-for /f "tokens=2 delims==" %%A in ('wmic cpu get NumberOfCores /value') do (
-    set TOTAL_CORES=%%A
-)
-set /a PCORES=(TOTAL_LOGICAL-TOTAL_CORES)*2
-
-echo ============================================================
-echo  Total Logical cores   : %TOTAL_LOGICAL%
-echo  Total Physical cores  : %TOTAL_CORES%
-echo  Total P-cores         : %PCORES%
-echo ============================================================
-echo.
-
 REM Uncomment one of the following lines to choose the web browser
 REM In this case you must set launch.browser to FALSE in the Rscript commande line
-start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" http://127.0.0.1:%PORT%
+REM start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" http://127.0.0.1:%PORT%
 REM start "" "C:\Program Files\Mozilla Firefox\firefox.exe" http://127.0.0.1:%PORT%
 REM start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" http://127.0.0.1:%PORT%
 
 title RnmrQuant1D
-REM "%RPATH%\bin\Rscript.exe" -e "shiny::runApp(appDir=file.path(getwd(),'app'), port=%PORT%, launch.browser=TRUE, host='127.0.0.1')"
-"%RPATH%\bin\Rscript.exe" -e "shiny::runApp(appDir=file.path(getwd(),'app'), port=%PORT%, launch.browser=FALSE, host='127.0.0.1')"
+set LAUNCH=TRUE
+"%RPATH%\bin\Rscript.exe" -e "shiny::runApp(appDir=file.path(getwd(),'app'), port=%PORT%, launch.browser=%LAUNCH%, host='127.0.0.1')"
