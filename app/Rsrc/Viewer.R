@@ -195,7 +195,7 @@ output$peak_row_sel <- renderPrint({
 			if (RATIO<1) RATIO <- 1/RATIO
 			DS <- 200*abs(peaks[rowsel[k],5]-peaks[rowsel[k-1],5])/(peaks[rowsel[k],5]+peaks[rowsel[k-1],5])
 			M <- rbind( M, c( paste0(peaks[rowsel[k-1],1],'-',peaks[rowsel[k],1]), 
-				round(PPM,4), round(HZ,1), round(RATIO,4), round(DS,2) ) )
+				round(PPM,4), round(HZ,2), round(RATIO,3), round(DS,2) ) )
 		}
 		colnames(M) <- c('Peaks', 'Center', 'Hz', 'Ratio Amp.', 'dSigma(%)')
 		M
@@ -222,7 +222,8 @@ output$outProfile <- renderDT({
 	unlink(file.path(gp$IMGDIR, paste0('*.',gp$mode)))
 	infos <- infolist()
 	quantif <- rq1d$PROFILE$quantif
-	M <- as.data.frame(quantif[ quantif$compound==input$selcmpds, c(1:7), drop=F])
+	zone <- as.integer(unique(quantif[ quantif$compound==input$selcmpds, ]$zone))
+	M <- as.data.frame(quantif[ quantif$zone==zone, c(1:7), drop=F])
 	M[,4] <- sapply(M[,4], function(x) gsub(',', ', ',x))
 	M[,5] <- sapply(M[,5], function(x) gsub(',', ', ',x))
 	M[,6] <- sapply(M[,6], function(x) gsub(',', ', ',x))
