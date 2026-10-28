@@ -29,7 +29,7 @@ gp <- list(
 	font2 = list(family = "Arial", size = 14)
 )
 
-# Reactive values ​​for the x and y limits of the spectrum graph
+# Reactive values for the x and y limits of the spectrum graph
 gprv <- reactiveValues(	xmin = NULL, xmax = NULL )
 
 # Saving selections is necessary for infolist reactivity

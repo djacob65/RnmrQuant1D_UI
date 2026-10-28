@@ -152,9 +152,9 @@ quant_process_job <- function()
 					length(list.files(rq1d$TMPDIR, pattern = "output_.+\\.txt$"))
 			)
 			if (n_logs>rv$n_logs) {
-				files <- list.files(rq1d$TMPDIR, pattern = "^output_.+\\.txt$", full.names = TRUE )
+				files <- list.files(rq1d$TMPDIR, pattern = "^(output_|log-).+\\.txt$", full.names = TRUE )
 				latest <- files[which.max(file.info(files)$mtime)]
-				latest <- gsub('.txt','',gsub('output_','',basename(latest)))
+				latest <- gsub('.txt','',gsub("(output_|log-)",'',basename(latest)))
 				rv$n_logs <- n_logs
 				msg <- paste('Processing running since ',
 					round(as.numeric(Sys.time()-start.time, units="secs")),'secs - ',latest,' (', rv$n_logs,'/',nrow(rq1d$SAMPLES),') ...')
