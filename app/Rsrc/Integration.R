@@ -293,7 +293,7 @@ output$outIntg <- renderPrint({
 		}
 
 		max_ncpu <- ifelse(gv$max_ncpu>0, gv$max_ncpu, parallel::detectCores())
-		gv$ncpu <- min(length(gv$zones), max_ncpu)
+		gv$ncpu <- min(nrow(rq1d$SAMPLES), max_ncpu)
 		cat("\n")
 		cat(paste('Selected Zones : ', paste(gv$zones, collapse=",")),"\n")
 		cat(paste('Nb Cores =', gv$ncpu),"\n")
@@ -314,6 +314,7 @@ output$outIntg <- renderPrint({
 		rv$endproc <- FALSE
 		rv$n_logs <- 0
 		rv$proc_output <- NULL
+		rq1d$ADJUST_IDENT <<- gv$adjust_ident
 
 		# Initialize the cluster then launch the processing
 		rv$process_job <- submit_rq1d_proc(rq1d, gv, 'intg')

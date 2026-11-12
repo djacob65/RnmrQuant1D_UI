@@ -434,15 +434,16 @@ ui <- fluidPage(
 										radioButtons("showlegend", "Legend:", c("None" = "none", "Top" = "top", "Bottom" = "bottom"),
 											selected='top', inline = FALSE)
 									),
-									column(2,
+									column(3,
 										checkboxInput("showgrid", "Show gridlines", TRUE),
 										checkboxInput("axislbl", "Show axis labels", FALSE),
-										checkboxInput("yaxis", "Show Y axis", TRUE)
+										checkboxInput("yaxis", "Show Y axis", TRUE),
+										checkboxInput("showpeaklist", "Show peaklist", FALSE)
 									),
-									column(3,
-										checkboxInput("showpeaklist", "Show peaklist", FALSE),
+									column(4,
 										checkboxInput("showprofile", "Show profile", FALSE),
 										checkboxInput("residus", "Plot with residus", FALSE),
+										checkboxInput("baseline", "Plot with baseline", FALSE),
 										checkboxInput("specbl", "Spectrum with BL correction", T)
 									)
 								)

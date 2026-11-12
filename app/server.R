@@ -53,7 +53,8 @@ server <- function(input, output, session)
 		endunzip = FALSE,           # End of unzipping uploaded file
 		endcalib = FALSE,           # End of calibration
 		endproc = FALSE,            # End of processing
-		n_logs = 0                  # Number of processed samples 
+		n_logs = 0,                 # Number of processed samples
+		mtime = 0                   # last modification time
 	)
 
 	# Pressure counters on the "Import / Launch" buttons

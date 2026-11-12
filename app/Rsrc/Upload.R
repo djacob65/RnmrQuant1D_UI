@@ -164,7 +164,6 @@ output$fileProcessed <- reactive({
 		rq1d$RAWDIR <<- gv$outDir
 		gv$hasQCQS  <<- FALSE
 		rq1d$TYPE <<- '-'
-		rq1d$ADJUST_IDENT <<- gv$adjust_ident
 
 		# Check sample list provided by the user
 		gv$samples <<- open_samples_file(gv$SampleFile)

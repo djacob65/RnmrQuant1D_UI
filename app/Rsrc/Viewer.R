@@ -14,6 +14,7 @@ gp <- list(
 	plotTrueSpec = TRUE,
 	plotzones = FALSE,
 	plotresidus = FALSE,
+	plotBL = FALSE,
 	tags = 'none',
 	showgrid = TRUE,
 	legendhoriz = TRUE,
@@ -78,8 +79,7 @@ infolist <- reactive({
 	}
 	infos <- infos[ infos[,1]==samples[idx,2] & infos[,3]==zone, , drop=F]
 	infos <- infos[, -c(7:10,12,13)]
-	if (! input$onlyintg)
-		infos <- cbind(infos, spec$TSPwidth)
+	infos <- cbind(infos, spec$TSPwidth)
 	infos[, ncol(infos)] <- as.character(infos[, ncol(infos)])
 	colnames(infos)[ncol(infos)] <- 'TSP width (Hz)'
 	peaklist <- rq1d$res$peaklist
@@ -243,6 +243,7 @@ output$spectrum<-renderPlotly({
 	idx <- which( unique(samples[,2])==input$selsamples )
 	gp$plotTrueSpec <- ! input$specbl
 	gp$plotresidus <- input$residus
+	gp$plotBL <- input$baseline
 	gp$tags <- input$tags
 	gp$showgrid <- input$showgrid
 	gp$showlegend <- ifelse(input$showlegend=='none', FALSE, TRUE)

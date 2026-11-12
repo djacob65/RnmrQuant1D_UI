@@ -440,7 +440,9 @@ submit_rq1d_proc <- function(rq1d, gv, proctype='quant', reset=TRUE)
 {
 	unlink(file.path(rq1d$TMPDIR,"log-*.txt"))
 	unlink(file.path(rq1d$TMPDIR,"output_*.txt"))
+	unlink(file.path(rq1d$TMPDIR, rq1d$cluster_status_file))
 	unlink(file.path(rq1d$TMPDIR,ENDFILE))
+	unlink(file.path(rq1d$RDATADIR,"*.RData"))
 	saveRDS(rq1d, file=file.path(gv$outDir,'rq1d.rds'))
 
 	zones <- paste(gv$zones, collapse=",")

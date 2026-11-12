@@ -107,6 +107,13 @@ calib_process_job <- function()
 	})
 }
 
+get_n_logs <- function()
+{
+	ifelse(input$onlyintg,
+		length(list.files(rq1d$TMPDIR, pattern = "log-.+\\.txt$")),
+		length(list.files(rq1d$RDATADIR, pattern="\\.RData$", full.names = FALSE))
+	)
+}
 
 # --------------------------
 # Process management of the integration/quantification
@@ -116,16 +123,16 @@ quant_process_job <- function()
 	isolate({
 		# Job is ended
 		if (!rv$process_job$is_alive()) {
+			rv$n_logs <- get_n_logs()
 			if (rv$n_logs == nrow(rq1d$SAMPLES)) {
 				res <- readRDS(file = file.path(gv$outDir,'rq1d.rds'))
 				rq1d <<- res$rq1d
 				if (!input$onlyintg) rq1d$get_spectra_data()
 			} else {
-				msg <- ifelse(rv$n_logs>0, paste(": Spectrum concerned =",rq1d$SAMPLES[rv$n_logs,1]), "" )
 				if (input$onlyintg) {
-					dispAlert3(paste("ERROR: Integrals failed",msg))
+					dispAlert3("ERROR: Integrals failed")
 				} else {
-					dispAlert4(paste("ERROR: Quantification failed",msg))
+					dispAlert4("ERROR: Quantification failed")
 				}
 			}
 
@@ -147,17 +154,18 @@ quant_process_job <- function()
 		
 		# Job is running : update progress bar
 		else {
-			n_logs <- ifelse(input$onlyintg,
-					length(list.files(rq1d$TMPDIR, pattern = "log-.+\\.txt$")),
-					length(list.files(rq1d$TMPDIR, pattern = "output_.+\\.txt$"))
-			)
-			if (n_logs>rv$n_logs) {
-				files <- list.files(rq1d$TMPDIR, pattern = "^(output_|log-).+\\.txt$", full.names = TRUE )
-				latest <- files[which.max(file.info(files)$mtime)]
-				latest <- gsub('.txt','',gsub("(output_|log-)",'',basename(latest)))
+			n_logs <-get_n_logs()
+			mtime <- rv$mtime
+			if (n_logs>0 && input$onlyintg) {
+				files <- list.files(rq1d$TMPDIR, pattern = "^log-.+\\.txt$", full.names = TRUE )
+				mtime <- max(file.info(files)$mtime)
+			}
+			clok <- file.exists(file.path(rq1d$TMPDIR, rq1d$cluster_status_file))
+			if ((clok && n_logs==0) || n_logs>rv$n_logs || mtime>rv$mtime) {
 				rv$n_logs <- n_logs
+				rv$mtime <- mtime
 				msg <- paste('Processing running since ',
-					round(as.numeric(Sys.time()-start.time, units="secs")),'secs - ',latest,' (', rv$n_logs,'/',nrow(rq1d$SAMPLES),') ...')
+					round(as.numeric(Sys.time()-start.time, units="secs")),'secs  (', rv$n_logs,'/',nrow(rq1d$SAMPLES),') ...')
 				percent <- round(100*(rv$n_logs/nrow(rq1d$SAMPLES)))
 				if (input$onlyintg)
 					intg_pb(msg, percent)

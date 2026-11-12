@@ -44,13 +44,12 @@ RUN  apt-get update && apt-get install -y \
        r-cran-htmltools r-cran-htmlwidgets r-cran-markdown r-cran-devtools \
        r-cran-dt r-cran-plotly r-cran-magrittr r-cran-ggplot2 r-cran-igraph \
        r-cran-biocmanager r-bioc-impute r-bioc-massspecwavelet \ 
-       r-cran-shiny r-cran-shinybs r-cran-shinyjs r-cran-shinywidgets r-cran-bslib \
+       r-cran-shiny r-cran-shinybs r-cran-shinyjs r-cran-bslib \
        r-cran-shinycssloaders r-cran-colourpicker r-cran-openxlsx \
-  && R -e "remotes::install_version('shiny', version = '1.14.0', force=TRUE)" \
-  && R -e "remotes::install_version('shinyWidgets', version = '0.9.0', force=TRUE, upgrade='never')" \
-  && R -e "remotes::install_version('shinycssloaders', version = '1.1.0', force=TRUE, upgrade='never')" \
-  && R -e "remotes::install_version('htmltools', version = '0.5.9', force=TRUE, upgrade='never')" \
+  && R -e "remotes::install_version('shinyWidgets', version = '0.8.1', force=TRUE)" \
   && R -e "install.packages(c('webshot2'), repos='http://cran.rstudio.com/')"
+
+  # && R -e "remotes::install_version('shiny', version = '1.14.0', force=TRUE)" \
 
 # Install RnmrQuant1D package
 RUN  R -e "remotes::install_github('inra/Rnmr1D', upgrade='never')" \

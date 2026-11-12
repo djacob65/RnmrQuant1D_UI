@@ -18,7 +18,7 @@ This <a href="https://shiny.posit.co/r/getstarted/" target="_blank">R Shiny</a> 
 * Requirements:
 
 	* R version >= 4.3
-	* RnmrQuant1D >= 1.2.6 (see https://github.com/djacob65/RnmrQuant1D)
+	* RnmrQuant1D >= 1.3.0 (see https://github.com/djacob65/RnmrQuant1D)
 	```r
 	if (!require("devtools"))
 		install.packages("devtools", repos="https://cran.rstudio.com")
@@ -27,8 +27,10 @@ This <a href="https://shiny.posit.co/r/getstarted/" target="_blank">R Shiny</a> 
 
 	* Other R packages : shiny, shinyjs, shinyBS, shinyWidgets, shinycssloaders, markdown, colourpicker
 	```r
-	install.packages(c('shiny','shinyjs','shinyBS','shinyWidgets','shinycssloaders',
-					'markdown','colourpicker'), repos = 'https://cran.rstudio.com')
+	require(devtools)
+	install_version("shiny", version = "1.14.0", repos = "http://cran.rstudio.com")
+	install.packages(c('shinyjs','shinyBS','shinyWidgets','shinycssloaders',
+			'markdown','colourpicker',''webshot2'), repos = 'https://cran.rstudio.com')
 	```
 
 * Clone this repository, then `cd` to your clone path.
@@ -90,7 +92,7 @@ It is also possible to pull the Docker image directly from Docker Hub, bypassing
 
 ## License
 
-Copyright (C) 2026  Daniel Jacob - INRAE
+Copyright (C) 2026  INRAE
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

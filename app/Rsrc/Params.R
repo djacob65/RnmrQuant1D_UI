@@ -37,25 +37,31 @@ gparamsModal <- function()
 			#----------------------------------------------------
 			tabPanel('Parameters', tags$div(class="tabs",
 				tags$br(), tags$br(),
-				tags$table(
-					tags$tr(tags$td(tags$strong("Global parameters"))), tags$tr(tags$td(tags$hr())),
-					tags$tr(tags$td(width="400px", tags$strong("NB MAX CORES (0 means Auto)"))),
-					tags$tr(tags$td(
-						numericInput("max_ncpu", NULL, gv$max_ncpu, min = 0, max = parallel::detectCores(), step=1))),
-					tags$tr(tags$td(width="400px",
-						checkboxInput('affinity', 'Set CPU affinity', gv$affinity))),
-					tags$tr(tags$td(tags$br())),
-					tags$tr(tags$td(width="400px", tags$strong("Default dilution factor value"))),
-					tags$tr(tags$td(
-						numericInput("fac_dilution", NULL, gv$fac_dilution, min = 0.7, max = 1, step=0.1))),
-					tags$tr(tags$td(tags$br())),
-					tags$tr(tags$td(textInput("QCtype", "QC type name", QCtype))),
-					tags$tr(tags$td(textInput("QStype", "QS type name", QStype))),
-					tags$tr(tags$td(tags$br())),
-					tags$tr(tags$td(
-						bsButton("okgparams", label = "Save", style="info", icon = icon("gear"))
-					)),
-					tags$tr(tags$td(tags$hr()))
+				tags$strong("Global parameters"), tags$hr(),
+				fluidRow(
+					column(width = 6,
+						tags$strong("NB MAX CORES (0 means Auto)"),
+						numericInput("max_ncpu", NULL, gv$max_ncpu, min = 0, max = parallel::detectCores(), step=1),
+						checkboxInput('affinity', 'Set CPU affinity', gv$affinity),
+						tags$br(),
+						checkboxInput('adjust_ident', 'Adjustment after identification',  gv$adjust_ident),
+						tags$br(),
+						tags$br(),
+						tags$br(),
+						tags$br(),
+						tags$br(),
+						bsButton("okgparams", label = "Save", style="info", icon = icon("gear")),
+						tags$br()
+					),
+					column(width = 6,
+						tags$strong("Default dilution factor value"),
+						numericInput("fac_dilution", NULL, gv$fac_dilution, min = 0.7, max = 1, step=0.1),
+						tags$br(),
+						textInput("SAMPLEtype", "Sample type name", SAMPLEtype),
+						textInput("QCtype", "QC type name", QCtype),
+						textInput("QStype", "QS type name", QStype),
+						tags$br()
+					)
 				)
 			)),
 	
@@ -66,8 +72,7 @@ gparamsModal <- function()
 				tags$br(), tags$br(),
 				tags$strong("Compound color settings in the spectra viewer"), tags$hr(),
 				fluidRow(
-					column(
-						width = 6,
+					column(width = 6,
 						h4("Compound colors"),
 						colorTextInput("col1", "Color 1", gp$colcpmds[1]),
 						colorTextInput("col2", "Color 2", gp$colcpmds[2]),
@@ -76,8 +81,7 @@ gparamsModal <- function()
 						colorTextInput("col5", "Color 5", gp$colcpmds[5]),
 						colorTextInput("col6", "Color 6", gp$colcpmds[6])
 					),
-					column(
-						width = 6,
+					column(width = 6,
 						h4("Color selector"),
 						uiOutput("picker_ui")
 					)
@@ -106,7 +110,7 @@ gparamsModal <- function()
 					tags$tr(tags$td(colspan = 2, tags$br())),
 					tags$tr(tags$td(style="vertical-align: top;", "Loarded Packages:"), tags$td( paste(packages, collapse=', ') )),
 					tags$tr(tags$td(colspan = 2, tags$br())),
-					tags$tr(tags$td(style="vertical-align: top;", "Others Packages:"), tags$td( paste(others, collapse=', ') )),
+					tags$tr(tags$td(style="vertical-align: top;", "Main Packages:"), tags$td( paste(others, collapse=', ') )),
 					tags$tr(tags$td(colspan = 2, tags$hr())),
 					tags$tr(tags$td(colspan = 2, hostip))
 				)
@@ -123,7 +127,9 @@ gparamsModal <- function()
 observeEvent(input$okgparams, {
 	gv$max_ncpu <<- min(input$max_ncpu,parallel::detectCores())
 	gv$affinity <<- input$affinity
+	gv$adjust_ident <<- input$adjust_ident
 	gv$fac_dilution <<- input$fac_dilution
+	SAMPLEtype <<- input$SAMPLEtype
 	QCtype <<- input$QCtype
 	QStype <<- input$QStype
 	QCQS <<-c( QCtype, QStype )
