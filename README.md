@@ -29,6 +29,7 @@ This <a href="https://shiny.posit.co/r/getstarted/" target="_blank">R Shiny</a> 
 	```r
 	require(devtools)
 	install_version("shiny", version = "1.14.0", repos = "http://cran.rstudio.com")
+	install_version('shinyWidgets', version = '0.8.1', force=TRUE)
 	install.packages(c('shinyjs','shinyBS','shinyWidgets','shinycssloaders',
 			'markdown','colourpicker',''webshot2'), repos = 'https://cran.rstudio.com')
 	```
